@@ -1,0 +1,22 @@
+# Python virtual environment
+backend/venv/
+venv/
+.venv/
+
+# Environment files
+backend/.env
+.env
+
+# SQLite local database
+backend/querysafe.db
+querysafe.db
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Task and log files
+*.log
+.system_generated/
