@@ -139,3 +139,4 @@ async def health():
 @app.get("/", include_in_schema=False)
 async def root():
     return {"message": "QuerySafe API v1.0.0 — see /api/docs for documentation."}
+# trigger commit
