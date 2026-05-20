@@ -9,6 +9,7 @@ Registers all module routers and configures:
 """
 
 import logging
+import importlib
 import os
 from contextlib import asynccontextmanager
 
@@ -100,30 +101,28 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Routers
 # ---------------------------------------------------------------------------
 
+
+def include_optional_router(module_path: str, feature_name: str) -> None:
+    try:
+        module = importlib.import_module(module_path)
+        app.include_router(module.router)
+    except ModuleNotFoundError as exc:
+        if exc.name != module_path and exc.name != module_path.split(".", 1)[0]:
+            raise
+        logger.warning(
+            "%s module not found — skipping %s routes (%s not yet integrated).",
+            feature_name.capitalize(),
+            feature_name,
+            module_path,
+        )
+
 # AI module — Person 1
 from ai.routes import router as ai_router
 app.include_router(ai_router)
 
-# Auth module — Person 2 (placeholder imports; module created by P2)
-try:
-    from auth.routes import router as auth_router
-    app.include_router(auth_router)
-except ImportError:
-    logger.warning("Auth module not found — skipping auth routes (P2 module not yet integrated).")
-
-# Database module — Person 3
-try:
-    from database.routes import router as db_router
-    app.include_router(db_router)
-except ImportError:
-    logger.warning("Database module not found — skipping database routes (P3 module not yet integrated).")
-
-# Security module — Person 2
-try:
-    from security.routes import router as security_router
-    app.include_router(security_router)
-except ImportError:
-    logger.warning("Security module not found — skipping security routes (P2 module not yet integrated).")
+include_optional_router("auth.routes", "auth")
+include_optional_router("database.routes", "database")
+include_optional_router("security.routes", "security")
 
 
 # ---------------------------------------------------------------------------
