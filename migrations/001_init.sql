@@ -1,3 +1,58 @@
+-- migrations/001_init.sql
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TYPE user_department AS ENUM ('engineering','hr','finance','sales','support');
+CREATE TYPE user_role AS ENUM ('admin','hr','finance','sales','support');
+
+CREATE TABLE IF NOT EXISTS users (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  email TEXT NOT NULL UNIQUE,
+  hashed_password TEXT NOT NULL,
+  department user_department NOT NULL,
+  role user_role NOT NULL,
+  totp_secret TEXT,
+  is_2fa_enabled BOOLEAN DEFAULT FALSE,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  last_login TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE IF NOT EXISTS database_connections (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  db_type TEXT NOT NULL,
+  encrypted_credentials TEXT,
+  connection_status TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid REFERENCES users(id),
+  connection_id uuid REFERENCES database_connections(id),
+  natural_query TEXT,
+  generated_sql TEXT,
+  execution_time_ms INTEGER,
+  row_count INTEGER,
+  was_blocked BOOLEAN DEFAULT FALSE,
+  block_reason TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid REFERENCES users(id),
+  session_token TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  expires_at TIMESTAMP WITH TIME ZONE,
+  is_active BOOLEAN DEFAULT TRUE
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_dbconns_user_id ON database_connections(user_id);
 -- ============================================================
 -- QuerySafe — PostgreSQL Migration: 001_init.sql
 -- Initializes the internal metadata database schema.

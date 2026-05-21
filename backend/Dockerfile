@@ -1,8 +1,3 @@
-"""
-QuerySafe Backend — Dockerfile
-Multi-stage build: deps cached separately from app code for fast rebuilds.
-"""
-
 # ── Stage 1: dependency builder ───────────────────────────────────────────
 FROM python:3.11-slim AS builder
 
@@ -61,7 +56,7 @@ USER querysafe
 EXPOSE 8000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Default command — uvicorn with 2 workers (scale via Docker replicas)

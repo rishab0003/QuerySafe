@@ -1,0 +1,17 @@
+# Local env files
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.venv/
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store
