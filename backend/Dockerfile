@@ -31,14 +31,10 @@ COPY --from=builder /install /install
 ENV PATH=/install/bin:$PATH PYTHONPATH=/install/lib/python3.11/site-packages:/app
 COPY --chown=appuser:appuser . /app
 
-# Attempt to pre-cache model (best effort)
-RUN python -c "import importlib
-try:
-    importlib.import_module('sentence_transformers')
-    from sentence_transformers import SentenceTransformer
-    SentenceTransformer('all-MiniLM-L6-v2')
-except Exception:
-    pass" || true
+# Attempt to pre-cache model (best-effort). Use a separate script to avoid
+# complex inline quoting in Dockerfile which can appear as an editor lint
+# error. The script is non-fatal on failure.
+RUN python /app/backend/scripts/precache_model.py || true
 
 RUN chown -R appuser:appuser /app
 USER appuser
