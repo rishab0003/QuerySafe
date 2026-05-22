@@ -15,3 +15,7 @@ dist/
 
 # OS
 .DS_Store
+
+# frontend build artifacts
+frontend/node_modules/
+frontend/.next/
