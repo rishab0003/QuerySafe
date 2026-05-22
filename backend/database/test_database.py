@@ -4,8 +4,8 @@ test_database.py — Comprehensive unit tests for the QuerySafe database module.
 
 import unittest
 from unittest.mock import MagicMock, patch
-from database.pool import db_pool, ConnectionPool
-from database.routes import is_read_only_query, extract_tables_from_sql, ROLE_ALLOWED_TABLES
+from database.pool import ConnectionPool
+from database.routes import is_read_only_query, extract_tables_from_sql
 from database.adapters.mongodb import MongoDBAdapter
 
 

@@ -8,7 +8,6 @@ SELECT statements before being returned to the frontend.
 """
 
 import json
-import os
 import re
 from typing import Any
 

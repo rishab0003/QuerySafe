@@ -54,7 +54,7 @@ class PostgresAdapter(BaseDBAdapter):
             cursor = dbapi_connection.cursor()
             try:
                 cursor.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;")
-            except Exception as e:
+            except Exception:
                 # Fallback check if execution fails
                 pass
             finally:
