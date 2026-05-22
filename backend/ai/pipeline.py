@@ -10,7 +10,6 @@ Implements a StatefulGraph with four sequential nodes:
 Supports OpenAI GPT-4 and Anthropic Claude, switchable via AI_PROVIDER env var.
 """
 
-import json
 import os
 import re
 import time
@@ -396,7 +395,7 @@ def result_formatter_node(state: PipelineState) -> PipelineState:
     Marks results as truncated if > 500 rows were returned.
     """
     raw_rows = state.get("result_rows", [])
-    schema_meta = {}
+    
 
     formatted: list[dict] = []
     truncated = False

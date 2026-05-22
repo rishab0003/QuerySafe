@@ -4,8 +4,8 @@ routes.py — FastAPI endpoints for multi-database management.
 
 import logging
 import re
-from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, HTTPException, Depends, status
+from typing import Any, Dict, List
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from database.pool import db_pool

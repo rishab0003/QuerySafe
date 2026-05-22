@@ -22,7 +22,6 @@ from pydantic import BaseModel, Field
 from ai.dashboard import generate_dashboard_config
 from ai.embeddings import index_schema, retrieve_relevant_schema
 from ai.memory import (
-    clear_session,
     format_history_for_prompt,
     get_session_history,
     save_message,
@@ -259,7 +258,6 @@ async def query_endpoint(
     execution_result = await _execute_query(body.connection_id, generated_sql, token)
 
     raw_rows: list = execution_result.get("rows", [])
-    db_metadata: dict = execution_result.get("metadata", {})
 
     # ── Step 6: Save conversation to Redis session memory ──────────────────
     save_message(body.session_id, "user", body.user_prompt)
