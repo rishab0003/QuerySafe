@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import useAuthStore from '../../../lib/store'
+import ChartGenerator from '../charts/ChartGenerator'
 
 type Employee = {
   id: string
@@ -184,6 +185,14 @@ export default function AdminPage() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+        
+        {/* Demo visualization panel for admins */}
+        {user?.role === 'admin' && (
+          <div className="mt-8">
+            <h2 className="text-lg font-medium mb-3">Visualization demo</h2>
+            <ChartGenerator fetchUrl={'/api/demo/signups'} />
           </div>
         )}
       </div>

@@ -39,6 +39,8 @@ COPY --chown=appuser:appuser . /app
 # complex inline quoting in Dockerfile which can appear as an editor lint
 # error. The script is non-fatal on failure.
 RUN python /app/backend/scripts/precache_model.py || true
+# Initialize demo database so demo endpoints are available in the image
+RUN python /app/backend/scripts/init_demo_db.py || true
 
 RUN chown -R appuser:appuser /app
 USER appuser

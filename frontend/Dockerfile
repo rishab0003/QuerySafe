@@ -15,6 +15,10 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 RUN addgroup -S nextjs && adduser -S -u 1001 -G nextjs nextjs
+# Install curl so the container healthcheck (curl) works
+USER root
+RUN apk add --no-cache curl
+USER nextjs
 COPY --from=builder --chown=nextjs:nextjs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nextjs /app/public ./public
 COPY --from=deps --chown=nextjs:nextjs /app/node_modules ./node_modules

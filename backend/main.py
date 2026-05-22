@@ -29,6 +29,10 @@ try:
     from ai.routes import router as ai_router
 except Exception:
     ai_router = None
+try:
+    from demo.routes import router as demo_router
+except Exception:
+    demo_router = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("querysafe")
@@ -59,6 +63,8 @@ def create_app() -> FastAPI:
         app.include_router(security_router)
     if ai_router is not None:
         app.include_router(ai_router)
+    if demo_router is not None:
+        app.include_router(demo_router, prefix="/demo")
 
     @app.get("/health")
     async def health():

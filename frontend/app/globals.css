@@ -211,6 +211,35 @@ body {
   box-shadow: 0 0 0 3px var(--jade-glow);
 }
 
+/* Fix select option readability: set dark background and white text for options */
+select.qs-input,
+.qs-select,
+select.qs-input:focus {
+  -webkit-appearance: none;
+  appearance: none;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+select.qs-input option,
+.qs-select option {
+  background: var(--bg-surface) !important;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+/* Additional vendor rules to increase chance of option styling applying */
+select.qs-input::-ms-value,
+select.qs-input::-ms-expand,
+.qs-select::-ms-value,
+.qs-select::-ms-expand {
+  color: #fff;
+  background: var(--bg-surface);
+}
+
+/* Hide native expand icon on IE/Edge */
+select.qs-input::-ms-expand { display: none; }
+
 /* ─── Scrollbar ─────────────────────────────────────────── */
 .scrollbar-thin::-webkit-scrollbar {
   width: 5px;

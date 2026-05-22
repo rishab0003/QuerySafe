@@ -33,7 +33,7 @@ def _row_to_user(row: dict) -> StoredUser:
     return StoredUser(
         id=str(row["id"]),
         email=str(row["email"]).lower(),
-        hashed_password=row.get("password_hash") or "",
+        hashed_password=row.get("hashed_password") or "",
         full_name=row.get("full_name") or "",
         department=(row.get("department") or "general").lower(),
         role=(row.get("role") or "viewer").lower(),
@@ -64,17 +64,7 @@ def get_user_by_email(email: str) -> StoredUser | None:
     if _use_postgres():
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, email, password_hash, full_name, role, department,
-                           totp_secret, is_2fa_enabled, is_active, approval_status,
-                           approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti,
-                           refresh_token_jti
-                    FROM users WHERE LOWER(email::text) = %s
-                    """,
-                    (normalized,),
-                )
+                cur.execute("SELECT * FROM users WHERE LOWER(email::text) = %s", (normalized,))
                 row = cur.fetchone()
                 return _row_to_user(row) if row else None
     return _MEMORY_BY_EMAIL.get(normalized)
@@ -84,16 +74,7 @@ def get_user_by_id(user_id: str) -> StoredUser | None:
     if _use_postgres():
         with get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    SELECT id, email, password_hash, full_name, role, department,
-                           totp_secret, is_2fa_enabled, is_active, approval_status,
-                           approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti
-                    FROM users WHERE id = %s
-                    """,
-                    (user_id,),
-                )
+                cur.execute("SELECT * FROM users WHERE id = %s", (user_id,))
                 row = cur.fetchone()
                 return _row_to_user(row) if row else None
     return _MEMORY_BY_ID.get(user_id)
@@ -104,28 +85,9 @@ def list_users(approval_status: str | None = None) -> list[StoredUser]:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 if approval_status:
-                    cur.execute(
-                        """
-                        SELECT id, email, password_hash, full_name, role, department,
-                               totp_secret, is_2fa_enabled, is_active, approval_status,
-                               approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti
-                        FROM users WHERE approval_status = %s
-                        ORDER BY created_at DESC
-                        """,
-                        (approval_status,),
-                    )
+                    cur.execute("SELECT * FROM users WHERE approval_status = %s ORDER BY created_at DESC", (approval_status,))
                 else:
-                    cur.execute(
-                        """
-                        SELECT id, email, password_hash, full_name, role, department,
-                               totp_secret, is_2fa_enabled, is_active, approval_status,
-                               approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti
-                        FROM users
-                        ORDER BY created_at DESC
-                        """
-                    )
+                    cur.execute("SELECT * FROM users ORDER BY created_at DESC")
                 return [_row_to_user(r) for r in cur.fetchall()]
     users = list(_MEMORY_BY_ID.values())
     if approval_status:
@@ -157,13 +119,10 @@ def register_user(
                 cur.execute(
                     """
                     INSERT INTO users (
-                        email, password_hash, full_name, role, department,
+                        email, hashed_password, full_name, role, department,
                         approval_status, is_active
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, email, password_hash, full_name, role, department,
-                              totp_secret, is_2fa_enabled, is_active, approval_status,
-                              approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti
+                        RETURNING *
                     """,
                     (
                         normalized_email,
@@ -223,14 +182,14 @@ def create_oauth_user(
                 else:
                     cur.execute(
                         """
-                        INSERT INTO users (
-                            email, password_hash, full_name, role, department,
-                            approval_status, is_active
-                        ) VALUES (%s, NULL, %s, 'viewer', 'general', %s, FALSE)
-                        RETURNING id
+                            INSERT INTO users (
+                                email, hashed_password, full_name, role, department,
+                                approval_status, is_active
+                            ) VALUES (%s, NULL, %s, 'viewer', 'general', %s, FALSE)
+                                    RETURNING id
                         """,
-                        (normalized_email, full_name or normalized_email.split("@")[0], APPROVAL_PENDING),
-                    )
+                            (normalized_email, full_name or normalized_email.split("@")[0], APPROVAL_PENDING),
+                        )
                     user_id = str(cur.fetchone()["id"])
 
                 cur.execute(
@@ -288,10 +247,10 @@ def approve_user(user_id: str, admin_id: str, role: str, department: str) -> Sto
                         approval_status = %s, is_active = TRUE,
                         approved_by = %s, approved_at = %s, updated_at = NOW()
                     WHERE id = %s
-                    RETURNING id, email, password_hash, full_name, role, department,
-                              totp_secret, is_2fa_enabled, is_active, approval_status,
-                              approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti
+                          RETURNING id, email, hashed_password, full_name, role, department,
+                                        totp_secret, is_2fa_enabled, is_active, approval_status,
+                                        approved_by, approved_at, created_at, updated_at,
+                                    refresh_token_jti
                     """,
                     (user_role, dept, APPROVAL_APPROVED, admin_id, now, user_id),
                 )
@@ -325,10 +284,10 @@ def reject_user(user_id: str, admin_id: str) -> StoredUser:
                         approval_status = %s, is_active = FALSE,
                         approved_by = %s, approved_at = %s, updated_at = NOW()
                     WHERE id = %s
-                    RETURNING id, email, password_hash, full_name, role, department,
-                              totp_secret, is_2fa_enabled, is_active, approval_status,
-                              approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti
+                          RETURNING id, email, hashed_password, full_name, role, department,
+                                        totp_secret, is_2fa_enabled, is_active, approval_status,
+                                        approved_by, approved_at, created_at, updated_at,
+                                    refresh_token_jti
                     """,
                     (APPROVAL_REJECTED, admin_id, now, user_id),
                 )
@@ -359,9 +318,9 @@ def update_user_role(user_id: str, role: str, department: str | None = None) -> 
                         UPDATE users SET role = %s, department = %s, updated_at = NOW()
                         WHERE id = %s
                         RETURNING id, email, password_hash, full_name, role, department,
-                                  totp_secret, is_2fa_enabled, is_active, approval_status,
-                                  approved_by, approved_at, created_at, updated_at,
-                           refresh_token_jti
+                                      totp_secret, is_2fa_enabled, is_active, approval_status,
+                                      approved_by, approved_at, created_at, updated_at,
+                                  refresh_token_jti
                         """,
                         (role.strip().lower(), department.strip().lower(), user_id),
                     )

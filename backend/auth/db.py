@@ -67,7 +67,7 @@ def init_auth_schema() -> None:
         """,
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES users(id) ON DELETE SET NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ",
-        "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL",
+        "ALTER TABLE users ALTER COLUMN hashed_password DROP NOT NULL",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS refresh_token_jti TEXT",
         """
         CREATE TABLE IF NOT EXISTS oauth_accounts (

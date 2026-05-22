@@ -36,3 +36,13 @@ Files added by DevOps guide implementation:
 - [scripts/generate_secrets.sh](scripts/generate_secrets.sh)
 - [scripts/healthcheck.sh](scripts/healthcheck.sh)
 
+Test credentials
+
+For local development and demo testing you can sign in with the seeded admin user:
+
+- Email: admin@querysafe.io
+- Password (Postgres seed): AdminPass123!
+- Dev bootstrap password (env default): QsBootstrap9!
+
+If you override `BOOTSTRAP_ADMIN_PASSWORD` in your `.env`, use that value instead when signing in.
+
