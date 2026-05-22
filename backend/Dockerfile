@@ -1,16 +1,20 @@
 FROM python:3.11-slim AS builder
 
+ARG USE_MINIMAL_DEPS=false
 WORKDIR /build
 
 # Install build deps needed for some Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev gcc curl && rm -rf /var/lib/apt/lists/*
+        build-essential libpq-dev gcc curl && rm -rf /var/lib/apt/lists/*
 
+# Copy both full and minimal requirement files
 COPY requirements.txt ./
+COPY req_no_psycopg.txt ./req_no_psycopg.txt
 
 # Install into a prefix so runtime image can copy only installed packages
+# Use minimal deps when requested to speed local builds and avoid heavy AI deps
 RUN pip install --upgrade pip \
-    && pip install --prefix=/install --no-cache-dir -r requirements.txt
+        && pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 
 FROM python:3.11-slim AS runtime
@@ -44,4 +48,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

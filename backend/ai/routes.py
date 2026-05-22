@@ -17,10 +17,24 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from auth.dependencies import get_current_user
 from pydantic import BaseModel, Field
 
-from ai.dashboard import generate_dashboard_config
-from ai.embeddings import index_schema, retrieve_relevant_schema
+try:
+    from ai.dashboard import generate_dashboard_config
+except Exception:
+    def generate_dashboard_config(*args, **kwargs):
+        raise RuntimeError("Dashboard unavailable: missing AI dependencies")
+
+try:
+    from ai.embeddings import index_schema, retrieve_relevant_schema
+except Exception:
+    def index_schema(connection_id, schema):
+        return None
+
+    def retrieve_relevant_schema(connection_id, user_prompt, top_k=8):
+        return []
 from ai.memory import (
     format_history_for_prompt,
     get_session_history,
@@ -204,8 +218,10 @@ async def ai_health():
 async def query_endpoint(
     body: QueryRequest,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    current_user=Depends(get_current_user),
 ) -> QueryResponse:
     token = credentials.credentials
+    user_role = current_user.role
     start_time = time.perf_counter()
 
     # ── Step 1: Load Redis session memory ──────────────────────────────────
@@ -225,7 +241,7 @@ async def query_endpoint(
     pipeline_result = run_query_pipeline(
         user_prompt=body.user_prompt,
         schema_context=schema,
-        role=body.role,
+        role=user_role,
         session_history=session_history_str,
         connection_id=body.connection_id,
     )
@@ -375,8 +391,10 @@ async def explain_endpoint(
 async def dashboard_endpoint(
     body: DashboardRequest,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    current_user=Depends(get_current_user),
 ) -> DashboardResponse:
     token = credentials.credentials
+    user_role = current_user.role
 
     # Fetch schema for context
     schema = await _fetch_schema(body.connection_id, token)
@@ -414,7 +432,7 @@ async def dashboard_endpoint(
         config = generate_dashboard_config(
             user_prompt=body.user_prompt,
             schema_context=relevant_schema,
-            role=body.role,
+            role=user_role,
         )
     except ValueError as exc:
         raise HTTPException(

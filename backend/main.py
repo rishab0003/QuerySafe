@@ -6,16 +6,29 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import routers
-from auth.routes import router as auth_router
-from security.routes import router as security_router
+# Import routers and middleware where available (work with minimal deps)
+try:
+    from auth.routes import router as auth_router
+    from auth.oauth_routes import router as oauth_router
+    from auth.admin_routes import router as admin_router
+    from auth.middleware import AuthContextMiddleware
+except Exception:
+    auth_router = None
+    oauth_router = None
+    admin_router = None
+    AuthContextMiddleware = None
+
+try:
+    from security.routes import router as security_router
+    from security.middleware import SecurityMiddleware
+except Exception:
+    security_router = None
+    SecurityMiddleware = None
+
 try:
     from ai.routes import router as ai_router
 except Exception:
     ai_router = None
-
-from security.middleware import SecurityMiddleware
-from auth.middleware import AuthContextMiddleware
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("querysafe")
@@ -25,16 +38,25 @@ def create_app() -> FastAPI:
     app = FastAPI(title="QuerySafe API")
 
     # CORS
-    allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost,http://localhost:3000").split(",")
+    # Include the frontend dev server port 3001 by default for local development
+    allowed = os.getenv("ALLOWED_ORIGINS", "http://localhost,http://localhost:3000,http://localhost:3001").split(",")
     app.add_middleware(CORSMiddleware, allow_origins=allowed, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
-    # Security middleware
-    app.add_middleware(SecurityMiddleware)
-    app.add_middleware(AuthContextMiddleware)
+    # Security middleware (only add if available)
+    if SecurityMiddleware is not None:
+        app.add_middleware(SecurityMiddleware)
+    if AuthContextMiddleware is not None:
+        app.add_middleware(AuthContextMiddleware)
 
-    # Include routers
-    app.include_router(auth_router)
-    app.include_router(security_router)
+    # Include routers if available
+    if auth_router is not None:
+        app.include_router(auth_router)
+    if oauth_router is not None:
+        app.include_router(oauth_router)
+    if admin_router is not None:
+        app.include_router(admin_router)
+    if security_router is not None:
+        app.include_router(security_router)
     if ai_router is not None:
         app.include_router(ai_router)
 

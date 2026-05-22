@@ -25,6 +25,11 @@ async def get_current_user(
     user = services.get_user_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found.")
+    if not user.can_authenticate():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account pending admin approval or inactive.",
+        )
     return user
 
 

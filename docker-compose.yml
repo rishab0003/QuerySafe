@@ -1,9 +1,12 @@
 # version line removed; using default version
+
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        USE_MINIMAL_DEPS: 'false'
       target: runtime
     container_name: querysafe-backend
     restart: unless-stopped
@@ -14,6 +17,14 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
       CHROMA_URL: http://chroma:8001
       ALLOWED_ORIGINS: http://localhost,http://localhost:3000,http://localhost:80
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      OAUTH_REDIRECT_BASE: ${OAUTH_REDIRECT_BASE:-http://localhost:8000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@querysafe.io}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-QsBootstrap9!}
       APP_ENV: ${APP_ENV:-development}
       DEBUG: ${DEBUG:-false}
     depends_on:
@@ -68,47 +79,6 @@ services:
           memory: 256M
 
   postgres:
-
-services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: runtime
-    container_name: querysafe-backend
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-querysafe_pass}@postgres:5432/querysafe
-      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
-      CHROMA_URL: http://chroma:8001
-      ALLOWED_ORIGINS: http://localhost,http://localhost:3000,http://localhost:80
-      APP_ENV: ${APP_ENV:-development}
-      DEBUG: ${DEBUG:-false}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      chroma:
-        condition: service_started
-    ports:
-      - '8000:8000'
-    networks:
-      - querysafe-net
-    healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:8000/health || exit 1']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
-  postgres:
     image: postgres:16-alpine
     container_name: querysafe-postgres
     restart: unless-stopped
@@ -118,8 +88,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-querysafe_pass}
     volumes:
       - ./migrations:/docker-entrypoint-initdb.d:ro
-    ports:
-      - '5432:5432'
     networks:
       - querysafe-net
     healthcheck:

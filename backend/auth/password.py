@@ -41,5 +41,20 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    if not hashed_password:
+        return False
+    try:
+        if pwd_context.verify(plain_password, hashed_password):
+            return True
+    except Exception:
+        pass
+    # Support legacy bcrypt hashes from SQL seed data
+    if hashed_password.startswith("$2"):
+        try:
+            import bcrypt
+
+            return bcrypt.checkpw(plain_password.encode(), hashed_password.encode())
+        except Exception:
+            return False
+    return False
 

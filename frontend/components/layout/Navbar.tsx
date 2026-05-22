@@ -3,6 +3,29 @@ import React from 'react'
 import Link from 'next/link'
 
 export default function Navbar(){
+  const [isDark, setIsDark] = React.useState<boolean>(false)
+
+  React.useEffect(()=>{
+    try{
+      const saved = localStorage.getItem('theme')
+      if(saved) setIsDark(saved === 'dark')
+      else setIsDark(document.documentElement.classList.contains('dark'))
+    }catch(e){}
+  },[])
+
+  const toggleTheme = ()=>{
+    try{
+      const next = !isDark
+      setIsDark(next)
+      if(next) {
+        document.documentElement.classList.add('dark')
+        localStorage.setItem('theme','dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+        localStorage.setItem('theme','light')
+      }
+    }catch(e){}
+  }
   return (
     <header className="w-full glass p-4 flex items-center justify-between shadow-sm"> 
       <div className="flex items-center gap-3">
@@ -13,6 +36,9 @@ export default function Navbar(){
         <Link href="/dashboard" className="hover:text-white">Dashboard</Link>
         <Link href="/dashboard/charts" className="hover:text-white">Charts</Link>
         <Link href="/auth/login" className="px-3 py-1 border border-white/10 rounded hover:bg-white/2">Login</Link>
+        <button onClick={toggleTheme} aria-label="Toggle theme" className="qs-btn-icon">
+          {isDark ? '🌙' : '☀️'}
+        </button>
       </nav>
     </header>
   )

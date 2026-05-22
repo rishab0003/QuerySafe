@@ -1,25 +1,32 @@
 "use client"
 import React from 'react'
 
-export default function ResultTable({ columns, rows }:{columns:string[], rows:Record<string,any>[]}){
+type Props = {
+  columns: string[]
+  rows: Array<Record<string, any>>
+}
+
+export default function ResultTable({columns, rows}: Props){
   return (
-    <div className="glass p-4 rounded">
-      <div className="overflow-x-auto">
-        <table className="w-full table-auto border-separate" style={{borderSpacing:0}}>
-          <thead>
-            <tr className="bg-ink-800">
-              {columns.map(c=> <th key={c} className="text-left py-3 px-3 text-ink-400 text-sm">{c}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r,i)=> (
-              <tr key={i} className={i%2===0? 'bg-white/2':'bg-transparent'}>
-                {columns.map(col=> <td key={col} className="py-2 px-3 text-sm">{String(r[col] ?? 'null')}</td>)}
-              </tr>
+    <div className="overflow-auto bg-[--bg-surface] rounded p-3">
+      <table className="w-full text-sm table-auto">
+        <thead>
+          <tr>
+            {columns.map(col=> (
+              <th key={col} className="text-left pr-4 pb-2 text-[--text-muted]">{col}</th>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r,idx)=> (
+            <tr key={idx} className={idx%2? 'bg-[--bg-elevated]':''}>
+              {columns.map(col=> (
+                <td key={col} className="py-2 pr-4 font-mono">{String(r[col] ?? '')}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }

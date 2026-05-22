@@ -1,21 +1,29 @@
+"use client"
 import React from 'react'
-import DBConnector from '../../components/dashboard/DBConnector'
-import ResultTable from '../../components/dashboard/ResultTable'
-import ChatPanel from './ChatPanel'
+import {useRouter} from 'next/navigation'
+import Sidebar from '../../components/dashboard/Sidebar'
+import ChatPanel from '../../components/dashboard/ChatPanel'
+import Inspector from '../../components/dashboard/Inspector'
+import useAuthStore from '../../lib/store'
 
-export default function Dashboard(){
+export default function DashboardPage(){
+  const router = useRouter()
+  const token = useAuthStore(s=>s.token)
+
+  React.useEffect(()=>{
+    if(typeof window === 'undefined') return
+    const t = localStorage.getItem('qs_token')
+    if(!t) router.replace('/auth/login')
+  },[router, token])
+
   return (
-    <div className="flex gap-6">
-      <aside className="w-72">
-        <DBConnector />
-      </aside>
-      <section className="flex-1">
-        <h2 className="text-xl font-semibold mb-4">Chat / Query</h2>
+    <div className="min-h-screen flex bg-[--bg-void] text-[--text-primary]">
+      <Sidebar />
+      <main className="flex-1 flex flex-col">
         <ChatPanel />
-        <div className="mt-6">
-          <ResultTable columns={["id","name","email"]} rows={[{id:1,name:'Alice',email:'a@example.com'}]} />
-        </div>
-      </section>
+      </main>
+      <Inspector />
     </div>
   )
 }
+ 

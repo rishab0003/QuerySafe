@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import JWTError
 
 from auth.blacklist import add_to_blacklist
@@ -35,12 +35,17 @@ from auth.services import (
     register_user,
     set_refresh_token_state,
     set_totp_secret,
+    startup as auth_startup,
 )
+from auth.dependencies import get_current_user
 from auth.totp import generate_qr_code, generate_totp_secret, verify_totp_code
 from security.audit import log_event, log_security_violation
 from security.rate_limit import allow_request
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+# Initialize store (Postgres or in-memory) on import
+auth_startup()
 
 
 def _client_ip(request: Request | None) -> str:
@@ -84,7 +89,15 @@ async def register(body: RegisterRequest, request: Request):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=reason)
     if get_user_by_email(body.email):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered.")
-    user = register_user(body.email, body.password, body.department, body.role)
+    user = register_user(
+        body.email,
+        body.password,
+        body.department,
+        "viewer",
+        full_name=body.full_name,
+        approval_status="pending",
+        is_active=False,
+    )
     log_event(user.id, "REGISTER_SUCCESS", ip=_client_ip(request), metadata={"email": user.email})
     return _user_payload(user)
 
@@ -98,6 +111,18 @@ async def login(body: LoginRequest, request: Request):
     if user is None:
         log_security_violation(None, "FAILED_LOGIN", "Invalid credentials.", ip=_client_ip(request), metadata={"email": body.email})
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
+    if user.approval_status == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your account was not approved. Contact your administrator.",
+        )
+    if not user.can_authenticate():
+        return LoginResponse(
+            requires_2fa=False,
+            temp_token=None,
+            approval_pending=True,
+            message="Your account is pending admin approval.",
+        )
     temp_token = create_temp_token(
         {
             "sub": user.id,
@@ -138,7 +163,14 @@ async def verify_2fa(body: VerifyTwoFactorRequest, request: Request):
     except JWTError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid temp token.") from exc
     user = get_user_by_id(claims.get("sub"))
-    if user is None or not user.totp_secret:
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found.")
+    if not user.can_authenticate():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account pending admin approval.",
+        )
+    if not user.totp_secret:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="2FA secret is not configured.")
     if not verify_totp_code(user.totp_secret, body.code):
         log_security_violation(user.id, "FAILED_2FA", "Invalid TOTP code.", ip=_client_ip(request))
@@ -171,4 +203,9 @@ async def logout(body: LogoutRequest, request: Request):
     add_to_blacklist(body.token)
     log_event(None, "LOGOUT", ip=_client_ip(request))
     return {"detail": "Logged out successfully."}
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_me(current_user=Depends(get_current_user)):
+    return _user_payload(current_user)
 
