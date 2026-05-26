@@ -40,9 +40,14 @@ export default function Sidebar(){
       </div>
 
       {user?.role === 'admin' && (
-        <Link href="/dashboard/admin" className="text-sm text-[--accent-cyan] hover:underline">
-          Manage employees
-        </Link>
+        <div className="space-y-2">
+          <Link href="/dashboard/admin" className="block text-sm text-[--accent-cyan] hover:underline">
+            Manage employees
+          </Link>
+          <Link href="/dashboard/admin/super-admin" className="block text-sm text-[--accent-cyan] hover:underline">
+            Super Admin
+          </Link>
+        </div>
       )}
 
       <div className="mt-auto text-xs text-[--text-muted] capitalize">

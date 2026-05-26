@@ -422,22 +422,77 @@ def set_refresh_token_state(user_id: str, jti: str | None, expires_at=None) -> S
 
 
 def ensure_bootstrap_admin() -> None:
-    """Create default admin when using in-memory store (dev)."""
+    """Create or sync the bootstrap admin credentials from environment variables."""
     import os
 
-    if _use_postgres():
-        return
     admin_email = os.getenv("BOOTSTRAP_ADMIN_EMAIL", "admin@querysafe.io").strip().lower()
+    password = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "QuerySafe!2026")
+    full_name = os.getenv("BOOTSTRAP_ADMIN_FULL_NAME", "QuerySafe Admin").strip() or "QuerySafe Admin"
+    department = os.getenv("BOOTSTRAP_ADMIN_DEPARTMENT", "general").strip().lower() or "general"
+
+    if _use_postgres():
+        hashed = hash_password(password)
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM users WHERE LOWER(email::text) = %s", (admin_email,))
+                row = cur.fetchone()
+                if row:
+                    cur.execute(
+                        """
+                        UPDATE users SET
+                            email = %s,
+                            hashed_password = %s,
+                            full_name = %s,
+                            role = 'admin',
+                            department = %s,
+                            approval_status = %s,
+                            is_active = TRUE,
+                            approved_by = NULL,
+                            approved_at = NOW(),
+                            totp_secret = NULL,
+                            is_2fa_enabled = FALSE,
+                            updated_at = NOW()
+                        WHERE id = %s
+                        """,
+                        (
+                            admin_email,
+                            hashed,
+                            full_name,
+                            department,
+                            APPROVAL_APPROVED,
+                            row["id"],
+                        ),
+                    )
+                    logger.info("Bootstrap admin synced: %s", admin_email)
+                    return
+
+                cur.execute(
+                    """
+                    INSERT INTO users (
+                        email, hashed_password, full_name, role, department,
+                        approval_status, is_active, is_2fa_enabled
+                    ) VALUES (%s, %s, %s, 'admin', %s, %s, TRUE, FALSE)
+                    """,
+                    (
+                        admin_email,
+                        hashed,
+                        full_name,
+                        department,
+                        APPROVAL_APPROVED,
+                    ),
+                )
+                logger.info("Bootstrap admin created: %s", admin_email)
+        return
+
     if get_user_by_email(admin_email):
         return
-    password = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "QsBootstrap9!")
     try:
         user = register_user(
             admin_email,
             password,
-            "general",
+            department,
             "admin",
-            full_name="QuerySafe Admin",
+            full_name=full_name,
             approval_status=APPROVAL_APPROVED,
             is_active=True,
         )

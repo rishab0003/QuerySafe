@@ -24,9 +24,13 @@ services:
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@querysafe.io}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-QsBootstrap9!}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-QuerySafe!2026}
       APP_ENV: ${APP_ENV:-development}
       DEBUG: ${DEBUG:-false}
+      # SMTP for email OTP during 2FA setup (MailHog in dev)
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM: ${SMTP_FROM:-no-reply@querysafe.local}
     depends_on:
       postgres:
         condition: service_healthy
@@ -142,6 +146,15 @@ services:
         condition: service_healthy
       frontend:
         condition: service_healthy
+    networks:
+      - querysafe-net
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: querysafe-mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP
+      - '8025:8025' # Web UI
     networks:
       - querysafe-net
     healthcheck:

@@ -10,6 +10,7 @@ export default function Setup2FA(){
   const [loading, setLoading] = React.useState(false)
   const [qr, setQr] = React.useState<string | null>(null)
   const [secret, setSecret] = React.useState<string | null>(null)
+  const [method, setMethod] = React.useState<'qr' | 'email'>('qr')
   const [code, setCode] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [redirectSeconds, setRedirectSeconds] = React.useState<number | null>(null)
@@ -48,10 +49,13 @@ export default function Setup2FA(){
     setLoading(true)
     const id = toast.loading('Requesting 2FA setup...')
     try{
-      const res = await api.post('/auth/setup-2fa', payload)
+      const res = await api.post('/auth/setup-2fa', { ...payload, method })
       const body = res.data
       setQr(body.qr_code_base64 ? `data:image/png;base64,${body.qr_code_base64}` : null)
       setSecret(body.secret || null)
+      if(body.otp_code) {
+        toast.success('OTP generated; check email or use shown code')
+      }
       toast.dismiss(id)
       toast.success('2FA setup ready')
     }catch(err: any){
@@ -106,9 +110,13 @@ export default function Setup2FA(){
         <h2 className="text-2xl font-display mb-4">Setup 2FA</h2>
         {!qr && (
           <form onSubmit={handleRequestSetup} className="space-y-3">
-            <p className="text-sm text-ink-400 mb-2">Enter your email to receive a 2FA setup QR.</p>
+            <p className="text-sm text-ink-400 mb-2">Choose setup method and enter your email.</p>
+            <div className="flex gap-3 mb-2">
+              <label className="inline-flex items-center"><input type="radio" name="method" checked={method==='qr'} onChange={()=>setMethod('qr')} /> <span className="ml-2">Authenticator App (QR)</span></label>
+              <label className="inline-flex items-center"><input type="radio" name="method" checked={method==='email'} onChange={()=>setMethod('email')} /> <span className="ml-2">Email OTP</span></label>
+            </div>
             <input className="qs-input" placeholder="you@example.com" value={email} onChange={(e)=>setEmail(e.target.value)} disabled={loading} />
-            <button className="qs-btn-primary w-full" disabled={loading}>Request QR</button>
+            <button className="qs-btn-primary w-full" disabled={loading}>Request</button>
           </form>
         )}
 
@@ -123,6 +131,9 @@ export default function Setup2FA(){
             <button className="qs-btn-primary w-full" disabled={loading}>Verify</button>
           </form>
         )}
+        {/* If OTP was returned directly (dev fallback), show it for convenience */}
+        {/* Note: this is only displayed if backend returns otp_code as part of setup response */}
+        {/* The verify form above will still accept the code */}
       </div>
     </div>
   )

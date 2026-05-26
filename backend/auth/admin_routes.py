@@ -3,8 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from auth.dependencies import require_admin
-from auth.schemas import ALLOWED_ROLES, ApproveUserRequest, UpdateRoleRequest, UserResponse
-from auth.services import approve_user, get_user_by_id, list_users, reject_user, update_user_role
+from auth.schemas import ALLOWED_ROLES, ApproveUserRequest, CreateUserRequest, UpdateRoleRequest, UserResponse
+from auth.services import approve_user, get_user_by_email, get_user_by_id, list_users, register_user, reject_user, update_user_role
+from auth.store import APPROVAL_APPROVED
 from security.audit import log_event
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -100,5 +101,36 @@ async def change_employee_role(
         "ADMIN_UPDATE_ROLE",
         ip=_client_ip(request),
         metadata={"target_user": user_id, "role": role},
+    )
+    return _user_payload(user)
+
+
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def create_user(
+    body: CreateUserRequest,
+    request: Request,
+    admin=Depends(require_admin),
+):
+    if get_user_by_email(body.email):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="A user with this email already exists.")
+
+    try:
+        user = register_user(
+            body.email,
+            body.password,
+            body.department,
+            body.role,
+            full_name=body.full_name,
+            approval_status=APPROVAL_APPROVED,
+            is_active=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    log_event(
+        admin.id,
+        "ADMIN_CREATE_USER",
+        ip=_client_ip(request),
+        metadata={"target_email": body.email, "role": body.role, "department": body.department},
     )
     return _user_payload(user)

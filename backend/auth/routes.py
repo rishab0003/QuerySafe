@@ -39,6 +39,12 @@ from auth.services import (
 )
 from auth.dependencies import get_current_user
 from auth.totp import generate_qr_code, generate_totp_secret, verify_totp_code
+from auth.email_otp import (
+    generate_otp_for_user,
+    is_smtp_configured,
+    send_otp_via_smtp,
+    verify_otp_for_user,
+)
 from security.audit import log_event, log_security_violation
 from security.rate_limit import allow_request
 
@@ -148,12 +154,23 @@ async def setup_2fa(body: SetupTwoFactorRequest, request: Request):
         user = get_user_by_email(body.email)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    method = (body.method or "qr").lower()
+    log_event(user.id, "2FA_SETUP_REQUEST", ip=_client_ip(request), metadata={"method": method})
+    if method == "email":
+        code = generate_otp_for_user(user.id, user.email)
+        smtp_ok = False
+        if is_smtp_configured():
+            smtp_ok = send_otp_via_smtp(user.email, code)
+        # If SMTP not configured or failed, return otp_code in response (dev fallback)
+        return TwoFactorSetupResponse(secret=None, otpauth_uri=None, qr_code_base64=None, otp_code=(code if not smtp_ok else None), smtp_configured=smtp_ok)
+
+    # default to QR/TOTP
     secret = user.totp_secret or generate_totp_secret()
     set_totp_secret(user.id, secret)
     qr_code_base64 = generate_qr_code(secret, user.email)
     otpauth_uri = f"otpauth://totp/QuerySafe:{user.email}?secret={secret}&issuer=QuerySafe"
     log_event(user.id, "2FA_SETUP", ip=_client_ip(request))
-    return TwoFactorSetupResponse(secret=secret, otpauth_uri=otpauth_uri, qr_code_base64=qr_code_base64)
+    return TwoFactorSetupResponse(secret=secret, otpauth_uri=otpauth_uri, qr_code_base64=qr_code_base64, smtp_configured=False)
 
 
 @router.post("/verify-2fa", response_model=TokenPairResponse)
@@ -170,11 +187,23 @@ async def verify_2fa(body: VerifyTwoFactorRequest, request: Request):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account pending admin approval.",
         )
-    if not user.totp_secret:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="2FA secret is not configured.")
-    if not verify_totp_code(user.totp_secret, body.code):
-        log_security_violation(user.id, "FAILED_2FA", "Invalid TOTP code.", ip=_client_ip(request))
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid verification code.")
+    # If a TOTP secret exists, prefer TOTP verification
+    if user.totp_secret:
+        if not verify_totp_code(user.totp_secret, body.code):
+            log_security_violation(user.id, "FAILED_2FA", "Invalid TOTP code.", ip=_client_ip(request))
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid verification code.")
+        mark_2fa_enabled(user.id, True)
+        log_event(user.id, "2FA_SUCCESS", ip=_client_ip(request))
+        return _issue_token_pair(user)
+
+    # Otherwise, attempt email OTP verification
+    if verify_otp_for_user(user.id, body.code):
+        mark_2fa_enabled(user.id, True)
+        log_event(user.id, "2FA_EMAIL_SUCCESS", ip=_client_ip(request))
+        return _issue_token_pair(user)
+
+    log_security_violation(user.id, "FAILED_2FA", "Invalid verification code.", ip=_client_ip(request))
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid verification code.")
     mark_2fa_enabled(user.id, True)
     log_event(user.id, "2FA_SUCCESS", ip=_client_ip(request))
     return _issue_token_pair(user)

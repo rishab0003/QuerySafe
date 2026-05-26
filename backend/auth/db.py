@@ -60,6 +60,11 @@ def init_auth_schema() -> None:
     if not check_db_connection():
         return
     statements = [
+        "ALTER TYPE user_department ADD VALUE IF NOT EXISTS 'general'",
+        "ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'viewer'",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS hashed_password TEXT",
         """
         ALTER TABLE users
             ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'approved'
@@ -86,5 +91,22 @@ def init_auth_schema() -> None:
             with conn.cursor() as cur:
                 for stmt in statements:
                     cur.execute(stmt)
+                cur.execute(
+                    """
+                    DO $$
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1
+                            FROM information_schema.columns
+                            WHERE table_name = 'users' AND column_name = 'password_hash'
+                        ) THEN
+                            UPDATE users
+                            SET hashed_password = COALESCE(hashed_password, password_hash)
+                            WHERE hashed_password IS NULL;
+                        END IF;
+                    END
+                    $$;
+                    """
+                )
     except Exception as exc:
         logger.warning("Could not ensure auth schema: %s", exc)

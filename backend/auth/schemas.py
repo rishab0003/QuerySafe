@@ -55,6 +55,7 @@ class LoginRequest(BaseModel):
 class SetupTwoFactorRequest(BaseModel):
     email: str | None = None
     temp_token: str | None = None
+    method: str | None = None  # 'qr' or 'email'
 
 
 class VerifyTwoFactorRequest(BaseModel):
@@ -98,6 +99,53 @@ class UpdateRoleRequest(BaseModel):
         return normalized
 
 
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    department: str = "general"
+    role: str = "viewer"
+
+    @field_validator("email")
+    @classmethod
+    def _validate_email(cls, value: str) -> str:
+        if not EMAIL_PATTERN.fullmatch(value.strip()):
+            raise ValueError("Invalid email format.")
+        return value.strip().lower()
+
+    @field_validator("password")
+    @classmethod
+    def _validate_password(cls, value: str) -> str:
+        password = value.strip()
+        if len(password) < 8:
+            raise ValueError("Password must be at least 8 characters long.")
+        return password
+
+    @field_validator("full_name")
+    @classmethod
+    def _validate_name(cls, value: str) -> str:
+        name = value.strip()
+        if len(name) < 2:
+            raise ValueError("Full name is required.")
+        return name
+
+    @field_validator("department")
+    @classmethod
+    def _normalize_department(cls, value: str) -> str:
+        normalized = value.strip().lower() or "general"
+        if normalized not in ALLOWED_DEPARTMENTS:
+            raise ValueError("Unsupported department.")
+        return normalized
+
+    @field_validator("role")
+    @classmethod
+    def _normalize_role(cls, value: str) -> str:
+        normalized = value.strip().lower() or "viewer"
+        if normalized not in ALLOWED_ROLES:
+            raise ValueError("Unsupported role.")
+        return normalized
+
+
 class LoginResponse(BaseModel):
     requires_2fa: bool = True
     temp_token: str | None = None
@@ -114,9 +162,11 @@ class TokenPairResponse(BaseModel):
 
 
 class TwoFactorSetupResponse(BaseModel):
-    secret: str
-    otpauth_uri: str
-    qr_code_base64: str
+    secret: str | None = None
+    otpauth_uri: str | None = None
+    qr_code_base64: str | None = None
+    otp_code: str | None = None
+    smtp_configured: bool | None = None
 
 
 class UserResponse(BaseModel):

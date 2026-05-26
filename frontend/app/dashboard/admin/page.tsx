@@ -1,10 +1,10 @@
 "use client"
 import React from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import useAuthStore from '../../../lib/store'
-import ChartGenerator from '../charts/ChartGenerator'
 
 type Employee = {
   id: string
@@ -16,7 +16,7 @@ type Employee = {
   is_active: boolean
 }
 
-const ROLES = ['viewer', 'hr', 'finance', 'sales', 'support']
+const ROLES = ['viewer', 'hr', 'finance', 'sales', 'support', 'admin']
 const DEPARTMENTS = ['general', 'engineering', 'hr', 'finance', 'sales', 'support']
 
 export default function AdminPage() {
@@ -118,6 +118,18 @@ export default function AdminPage() {
           </a>
         </div>
 
+        <div className="glass p-4 rounded-lg mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm uppercase tracking-[0.2em] text-[--text-muted]">Super Admin</div>
+            <p className="text-sm text-[--text-muted] mt-1">
+              Create approved user accounts with login ids and temporary passwords.
+            </p>
+          </div>
+          <Link href="/dashboard/admin/super-admin" className="qs-btn-primary text-sm text-center">
+            Open provisioning page
+          </Link>
+        </div>
+
         <div className="flex gap-2 mb-6">
           <button
             className={filter === 'pending' ? 'qs-btn-primary' : 'qs-btn-secondary'}
@@ -188,13 +200,6 @@ export default function AdminPage() {
           </div>
         )}
         
-        {/* Demo visualization panel for admins */}
-        {user?.role === 'admin' && (
-          <div className="mt-8">
-            <h2 className="text-lg font-medium mb-3">Visualization demo</h2>
-            <ChartGenerator fetchUrl={'/api/demo/signups'} />
-          </div>
-        )}
       </div>
     </div>
   )

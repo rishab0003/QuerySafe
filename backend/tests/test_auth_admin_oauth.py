@@ -13,7 +13,7 @@ from auth.store import reset_registry, startup  # noqa: E402
 from main import create_app  # noqa: E402
 
 ADMIN_EMAIL = "admin@querysafe.io"
-ADMIN_PASSWORD = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "QsBootstrap9!")
+ADMIN_PASSWORD = os.getenv("BOOTSTRAP_ADMIN_PASSWORD", "QuerySafe!2026")
 EMPLOYEE_PASSWORD = "S3cure!Passw0rd"
 
 
@@ -113,6 +113,32 @@ def test_admin_approve_and_employee_login(client: TestClient):
     me = client.get("/auth/me", headers={"Authorization": f"Bearer {emp_tokens['access_token']}"})
     assert me.status_code == 200
     assert me.json()["role"] == "finance"
+
+
+def test_admin_can_provision_approved_user(client: TestClient):
+    admin_tokens = _login_through_2fa(client, ADMIN_EMAIL, ADMIN_PASSWORD)
+    admin_headers = {"Authorization": f"Bearer {admin_tokens['access_token']}"}
+
+    created = client.post(
+        "/admin/users",
+        headers=admin_headers,
+        json={
+            "email": "provisioned@test.com",
+            "password": EMPLOYEE_PASSWORD,
+            "full_name": "Provisioned User",
+            "department": "engineering",
+            "role": "admin",
+        },
+    )
+    assert created.status_code == 201, created.text
+    payload = created.json()
+    assert payload["approval_status"] == "approved"
+    assert payload["is_active"] is True
+    assert payload["role"] == "admin"
+
+    login = client.post("/auth/login", json={"email": "provisioned@test.com", "password": EMPLOYEE_PASSWORD})
+    assert login.status_code == 200, login.text
+    assert login.json().get("temp_token")
 
 
 def test_non_admin_cannot_list_users(client: TestClient):
