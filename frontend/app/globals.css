@@ -6,7 +6,56 @@
 
 /* ─── Design Tokens ─────────────────────────────────────── */
 :root {
-  /* Core palette — Encrypted Vault meets Liquid Intelligence */
+  color-scheme: light;
+  /* Core palette — airy default for the light theme */
+  --bg-void: #f5f7fb;
+  --bg-surface: rgba(255, 255, 255, 0.88);
+  --bg-elevated: #ffffff;
+  --accent-cyan: #0b9ec2;
+  --accent-green: #0a9d68;
+  --accent-amber: #c47a00;
+  --accent-red: #cf3c5e;
+  --text-primary: #0c1320;
+  --text-muted: #5d6877;
+  --border-subtle: #d7deea;
+
+  /* Legacy tokens mapped to new palette for compatibility */
+  --jade: var(--accent-cyan);
+  --jade-dim: #0a7fa0;
+  --jade-glow: rgba(11, 158, 194, 0.16);
+  --jade-subtle: rgba(11, 158, 194, 0.08);
+  --ink: var(--text-primary);
+  --ink-950: #07101a;
+  --ink-900: #10192a;
+  --ink-800: #182235;
+  --ink-700: #253149;
+  --ink-600: #38465d;
+  --ink-500: #4f5e74;
+  --ink-400: #69768b;
+  --ink-300: #7f8a9b;
+  --ink-200: #9ea8b8;
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(12, 19, 32, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.72);
+  --crimson: var(--accent-red);
+  --amber: var(--accent-amber);
+  --blue: var(--accent-cyan);
+  --purple: #7c5ce6;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --shadow-glow: 0 0 40px rgba(11, 158, 194, 0.08);
+  --shadow-card: 0 10px 28px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 18px 42px rgba(15, 23, 42, 0.10), 0 4px 12px rgba(15, 23, 42, 0.06);
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html.dark {
+  color-scheme: dark;
   --bg-void: #050810;
   --bg-surface: #0D1117;
   --bg-elevated: #161B22;
@@ -17,8 +66,6 @@
   --text-primary: #E6EDF3;
   --text-muted: #7D8590;
   --border-subtle: #21262D;
-
-  /* Legacy tokens mapped to new palette for compatibility */
   --jade: var(--accent-cyan);
   --jade-dim: #00A87E;
   --jade-glow: rgba(0, 212, 255, 0.12);
@@ -40,17 +87,9 @@
   --amber: var(--accent-amber);
   --blue: var(--accent-cyan);
   --purple: #8B5CF6;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
   --shadow-glow: 0 0 40px rgba(0, 212, 255, 0.06);
   --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.45), 0 1px 6px rgba(0, 0, 0, 0.35);
   --shadow-elevated: 0 8px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.38);
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ─── Base ──────────────────────────────────────────────── */
@@ -62,11 +101,14 @@
 
 html, body {
   height: 100%;
-  overflow: hidden;
+  /* Allow page scrolling; previous `overflow: hidden` prevented scrolling on the homepage. */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
-  @apply bg-ink text-white antialiased;
+  background: var(--bg-void);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -81,15 +123,15 @@ body {
 }
 
 .glass-subtle {
-  background: rgba(18, 18, 40, 0.4);
+  background: var(--glass-highlight);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
 }
 
 .glass-elevated {
-  background: rgba(16, 16, 36, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(24px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-card);
 }
 
@@ -124,32 +166,32 @@ body {
 
 .qs-btn-secondary {
   @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-highlight);
   color: var(--ink-200);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
   transition: all var(--transition-fast);
   cursor: pointer;
 }
 
 .qs-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(11, 158, 194, 0.12);
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(11, 158, 194, 0.18);
 }
 
 .qs-btn-ghost {
   @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium;
   color: var(--ink-300);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
   transition: all var(--transition-fast);
   cursor: pointer;
 }
 
 .qs-btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--glass-highlight);
+  color: var(--text-primary);
+  border-color: rgba(11, 158, 194, 0.18);
 }
 
 .qs-btn-icon {
@@ -164,38 +206,38 @@ body {
 }
 
 .qs-btn-icon:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: var(--glass-highlight);
+  color: var(--text-primary);
 }
 
 /* ─── Inputs ────────────────────────────────────────────── */
 .qs-input {
   @apply w-full rounded-lg text-sm;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--glass-highlight);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
   outline: none;
   transition: all var(--transition-fast);
   font-family: inherit;
 }
 
 .qs-input::placeholder {
-  color: var(--ink-500);
+  color: var(--text-muted);
 }
 
 .qs-input:focus {
   border-color: var(--jade);
   box-shadow: 0 0 0 3px var(--jade-glow);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
 }
 
 .qs-select {
   @apply w-full rounded-lg text-sm;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--glass-highlight);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
   outline: none;
   transition: all var(--transition-fast);
   font-family: inherit;
@@ -217,15 +259,15 @@ select.qs-input,
 select.qs-input:focus {
   -webkit-appearance: none;
   appearance: none;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  background: var(--glass-highlight);
 }
 
 select.qs-input option,
 .qs-select option {
   background: var(--bg-surface) !important;
-  color: #fff !important;
-  -webkit-text-fill-color: #fff !important;
+  color: var(--text-primary) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
 }
 
 /* Additional vendor rules to increase chance of option styling applying */
@@ -233,7 +275,7 @@ select.qs-input::-ms-value,
 select.qs-input::-ms-expand,
 .qs-select::-ms-value,
 .qs-select::-ms-expand {
-  color: #fff;
+  color: var(--text-primary);
   background: var(--bg-surface);
 }
 

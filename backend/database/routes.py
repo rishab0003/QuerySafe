@@ -97,8 +97,8 @@ class DBDisconnectResponse(BaseModel):
 # RBAC Table Access Mappings
 ROLE_ALLOWED_TABLES = {
     "hr": {"employees", "departments", "payroll"},
-    "finance": {"invoices", "expenses", "budgets", "transactions"},
-    "sales": {"customers", "orders", "products", "leads"},
+    "finance": {"invoices", "expenses", "budgets", "transactions", "sales"},
+    "sales": {"customers", "orders", "products", "leads", "sales"},
     "support": {"tickets", "users", "responses"}
 }
 

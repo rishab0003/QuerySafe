@@ -27,21 +27,21 @@ export default function AttackDemo(){
   }
 
   return (
-    <div className="glass p-4 rounded-lg w-full max-w-xl">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="glass w-full max-w-xl rounded-2xl p-5 sm:p-6">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <div className="font-medium">See the Safety Engine in Action</div>
         <div className="text-xs text-[--text-muted]">Try presets</div>
       </div>
 
-      <div className="mb-2 flex gap-2">
+      <div className="mb-3 flex flex-wrap gap-2">
         {PRESETS.map(p=> (
-          <button key={p} onClick={()=>{ setInput(p); runQuery(p) }} className="qs-btn-ghost text-xs">{p}</button>
+          <button key={p} onClick={()=>{ setInput(p); runQuery(p) }} className="qs-btn-ghost whitespace-nowrap text-xs">{p}</button>
         ))}
       </div>
 
-      <textarea value={input} onChange={(e)=>{ setInput(e.target.value); setStatus({type:'idle'}) }} className="qs-input h-20 mb-3" placeholder="Type SQL or natural language" />
+      <textarea value={input} onChange={(e)=>{ setInput(e.target.value); setStatus({type:'idle'}) }} className="qs-input mb-3 h-24" placeholder="Type SQL or natural language" />
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <button className="qs-btn-primary" onClick={()=>runQuery()}>Analyze</button>
         {status.type === 'blocked' && (
           <div className="ml-auto text-sm text-[--accent-red] flex items-center gap-2 animate-shake">
@@ -56,7 +56,7 @@ export default function AttackDemo(){
       </div>
 
       {status.type === 'safe' && (
-        <div className="mt-3 p-3 bg-[#071019] rounded border border-[--border-subtle]">
+        <div className="mt-4 rounded border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
           <div className="text-xs text-[--accent-green] mb-1">SQL Preview</div>
           <pre className="sql-block">-- Mock SQL result
 SELECT * FROM invoices WHERE amount &gt; 50000;</pre>

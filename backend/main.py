@@ -33,6 +33,10 @@ try:
     from demo.routes import router as demo_router
 except Exception:
     demo_router = None
+try:
+    from database.routes import router as database_router
+except Exception:
+    database_router = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("querysafe")
@@ -65,6 +69,8 @@ def create_app() -> FastAPI:
         app.include_router(ai_router)
     if demo_router is not None:
         app.include_router(demo_router, prefix="/demo")
+    if database_router is not None:
+        app.include_router(database_router)
 
     @app.get("/health")
     async def health():

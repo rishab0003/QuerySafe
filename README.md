@@ -14,7 +14,8 @@ chmod +x scripts/generate_secrets.sh
 3. Build and start the stack:
 
 ```bash
-docker compose up --build
+# Build the images and start the services in detached mode (frontend + backend + others)
+docker compose up --build -d
 ```
 
 4. Verify services:

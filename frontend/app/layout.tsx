@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className="bg-ink text-white overflow-hidden">
+      <body className="bg-[var(--bg-void)] text-[var(--text-primary)]">
         <ClientProviders>
           {children}
         </ClientProviders>

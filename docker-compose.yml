@@ -15,7 +15,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-querysafe_pass}@postgres:5432/querysafe
       REDIS_URL: redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
-      CHROMA_URL: http://chroma:8001
+      CHROMA_URL: http://chroma:8000
       ALLOWED_ORIGINS: http://localhost,http://localhost:3000,http://localhost:80
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       OAUTH_REDIRECT_BASE: ${OAUTH_REDIRECT_BASE:-http://localhost:8000}
@@ -58,7 +58,9 @@ services:
     env_file:
       - .env
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost/api
+      # When running in Docker, 'localhost' inside the frontend container
+      # refers to the container itself. Point API URL to the backend service.
+      NEXT_PUBLIC_API_URL: http://backend:8000/api
       NODE_ENV: production
     depends_on:
       backend:
@@ -117,11 +119,11 @@ services:
     container_name: querysafe-chroma
     restart: unless-stopped
     ports:
-      - '8001:8001'
+      - '8001:8000'
     networks:
       - querysafe-net
     healthcheck:
-      test: ['CMD-SHELL', 'curl -fsS http://localhost:8001/api/v1/heartbeat || exit 1']
+      test: ["CMD", "/usr/bin/bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8000"]
       interval: 15s
       timeout: 10s
       retries: 5

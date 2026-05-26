@@ -14,8 +14,16 @@ from cryptography.fernet import Fernet
 import redis
 
 from database.adapters.postgres import PostgresAdapter
-from database.adapters.mysql import MySQLAdapter
-from database.adapters.mongodb import MongoDBAdapter
+
+try:
+    from database.adapters.mysql import MySQLAdapter
+except ImportError:
+    MySQLAdapter = None
+
+try:
+    from database.adapters.mongodb import MongoDBAdapter
+except ImportError:
+    MongoDBAdapter = None
 
 logger = logging.getLogger("querysafe.database.pool")
 
@@ -80,8 +88,12 @@ class ConnectionPool:
         if db_type == "postgres" or db_type == "postgresql":
             return PostgresAdapter
         elif db_type == "mysql":
+            if MySQLAdapter is None:
+                raise ValueError("MySQL support is not installed. Install mysql-connector-python.")
             return MySQLAdapter
         elif db_type == "mongodb" or db_type == "mongo":
+            if MongoDBAdapter is None:
+                raise ValueError("MongoDB support is not installed. Install pymongo.")
             return MongoDBAdapter
         else:
             raise ValueError(f"Unsupported database type: {db_type}")
