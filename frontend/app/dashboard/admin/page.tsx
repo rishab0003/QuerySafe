@@ -34,12 +34,16 @@ export default function AdminPage() {
       router.replace('/auth/login')
       return
     }
-    if (user && user.role !== 'admin') {
-      router.replace('/dashboard')
-      return
+    if (user) {
+      if (user.role !== 'admin') {
+        router.replace('/dashboard')
+      } else {
+        loadEmployees()
+      }
+    } else {
+      loadProfile()
     }
-    loadProfile()
-  }, [router, user])
+  }, [])
 
   async function loadProfile() {
     try {
@@ -58,8 +62,8 @@ export default function AdminPage() {
   async function loadEmployees() {
     setLoading(true)
     try {
-      const q = filter ? `?status_filter=${filter}` : ''
-      const res = await api.get(`/admin/users${q}`)
+      // Fetch all users without server-side filtering to have correct tab counts
+      const res = await api.get('/admin/users')
       setEmployees(res.data)
       const roles: Record<string, string> = {}
       const depts: Record<string, string> = {}
@@ -76,17 +80,13 @@ export default function AdminPage() {
     }
   }
 
-  React.useEffect(() => {
-    if (user?.role === 'admin') loadEmployees()
-  }, [filter, user?.role])
-
   async function approve(id: string) {
     try {
       await api.post(`/admin/users/${id}/approve`, {
         role: roleById[id] || 'viewer',
         department: deptById[id] || 'general',
       })
-      toast.success('Employee approved')
+      toast.success('Employee approved successfully')
       loadEmployees()
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Approval failed')
@@ -103,70 +103,96 @@ export default function AdminPage() {
     }
   }
 
+  const filteredEmployees = filter === 'pending'
+    ? employees.filter(e => e.approval_status === 'pending')
+    : employees
+
   return (
-    <div className="min-h-screen bg-[--bg-void] text-[--text-primary] p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-display">Employee authorization</h1>
-            <p className="text-sm text-[--text-muted] mt-1">
-              Approve sign-ups and assign roles for your team.
-            </p>
-          </div>
-          <a href="/dashboard" className="text-sm text-ink-300 hover:text-white">
-            ← Back to dashboard
-          </a>
+    <div className="p-6 md:p-8 space-y-6 max-w-5xl w-full mx-auto overflow-y-auto scrollbar-thin">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[--text-primary]">Employee Authorization</h1>
+          <p className="text-xs text-[--text-muted] mt-0.5">
+            Approve sign-ups and assign specific role-based permissions for your team.
+          </p>
         </div>
+        <Link href="/dashboard" className="text-xs text-[var(--accent-cyan)] hover:underline border border-[var(--accent-cyan)]/20 px-3 py-1.5 rounded-lg bg-[var(--accent-cyan)]/5 font-medium transition-all">
+          ← Back to Workspace
+        </Link>
+      </div>
 
-        <div className="glass p-4 rounded-lg mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-sm uppercase tracking-[0.2em] text-[--text-muted]">Super Admin</div>
-            <p className="text-sm text-[--text-muted] mt-1">
-              Create approved user accounts with login ids and temporary passwords.
-            </p>
-          </div>
-          <Link href="/dashboard/admin/super-admin" className="qs-btn-primary text-sm text-center">
-            Open provisioning page
-          </Link>
+      {/* Super Admin Quick Link banner */}
+      <div className="glass p-5 rounded-2xl border border-[var(--accent-cyan)]/20 bg-[var(--accent-cyan)]/[0.01] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-card">
+        <div>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-cyan)] mb-1">Super Admin Account Provisioner</h3>
+          <p className="text-xs text-[--text-muted] leading-relaxed max-w-md">
+            Skip approval workflows by creating pre-authorized user accounts directly with credentials, roles, and departments.
+          </p>
         </div>
+        <Link href="/dashboard/admin/super-admin" className="qs-btn-primary py-2.5 px-4 text-xs font-semibold text-center whitespace-nowrap cursor-pointer shadow-glow">
+          Open Provisioning Panel
+        </Link>
+      </div>
 
-        <div className="flex gap-2 mb-6">
-          <button
-            className={filter === 'pending' ? 'qs-btn-primary' : 'qs-btn-secondary'}
-            onClick={() => setFilter('pending')}
-          >
-            Pending
-          </button>
-          <button
-            className={filter === '' ? 'qs-btn-primary' : 'qs-btn-secondary'}
-            onClick={() => setFilter('')}
-          >
-            All
-          </button>
+      {/* Filters */}
+      <div className="flex gap-2">
+        <button
+          className={filter === 'pending' ? 'qs-btn-primary text-xs font-medium cursor-pointer' : 'qs-btn-secondary text-xs font-medium cursor-pointer'}
+          onClick={() => setFilter('pending')}
+        >
+          Pending Approval ({employees.filter(e => e.approval_status === 'pending').length})
+        </button>
+        <button
+          className={filter === '' ? 'qs-btn-primary text-xs font-medium cursor-pointer' : 'qs-btn-secondary text-xs font-medium cursor-pointer'}
+          onClick={() => setFilter('')}
+        >
+          All Users ({employees.length})
+        </button>
+      </div>
+
+      {/* Employee List */}
+      {loading ? (
+        <div className="flex items-center gap-2 p-6 text-xs text-[--text-muted]">
+          <span className="loading-dot"></span>
+          <span className="loading-dot"></span>
+          <span className="loading-dot"></span>
+          Loading records...
         </div>
-
-        {loading ? (
-          <p className="text-[--text-muted]">Loading…</p>
-        ) : employees.length === 0 ? (
-          <div className="glass p-6 rounded-lg text-[--text-muted]">No employees in this list.</div>
-        ) : (
-          <div className="space-y-4">
-            {employees.map((e) => (
-              <div key={e.id} className="glass p-4 rounded-lg flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="font-medium">{e.full_name || e.email}</div>
-                  <div className="text-sm text-[--text-muted]">{e.email}</div>
-                  <div className="text-xs mt-1 capitalize">
-                    Status: <span className="text-ink-200">{e.approval_status}</span>
-                    {e.role && e.approval_status === 'approved' && (
-                      <> · Role: {e.role}</>
-                    )}
-                  </div>
+      ) : filteredEmployees.length === 0 ? (
+        <div className="glass p-8 rounded-2xl text-center text-xs text-[--text-muted] border border-white/5 shadow-card">
+          No employee records found in this list.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredEmployees.map((e) => (
+            <div key={e.id} className="glass p-5 rounded-2xl border border-white/5 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm text-[--text-primary]">{e.full_name || 'Anonymous User'}</span>
+                  <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                    e.approval_status === 'approved' ? 'bg-[var(--accent-green)]/15 text-[var(--accent-green)]' :
+                    e.approval_status === 'pending' ? 'bg-[var(--accent-cyan)]/15 text-[var(--accent-cyan)]' :
+                    'bg-[var(--accent-red)]/15 text-[var(--accent-red)]'
+                  }`}>
+                    {e.approval_status}
+                  </span>
                 </div>
-                {e.approval_status === 'pending' && (
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="text-xs text-[--text-muted] mt-0.5 font-mono">{e.email}</div>
+                {e.approval_status === 'approved' && (
+                  <div className="text-[10px] text-[--text-muted] mt-1.5 flex gap-2">
+                    <span className="bg-white/5 px-2 py-0.5 rounded">Role: {e.role}</span>
+                    <span className="bg-white/5 px-2 py-0.5 rounded capitalize">Dept: {e.department}</span>
+                  </div>
+                )}
+              </div>
+
+              {e.approval_status === 'pending' && (
+                <div className="flex flex-wrap items-center gap-2.5 bg-black/15 p-3 rounded-xl border border-white/5">
+                  <div>
+                    <label className="block text-[8px] font-semibold text-[--text-muted] uppercase mb-0.5 font-mono">Assign Role</label>
                     <select
-                      className="qs-input text-sm py-1"
+                      className="qs-select text-xs py-1.5 px-2.5"
                       value={roleById[e.id] || 'viewer'}
                       onChange={(ev) => setRoleById((r) => ({ ...r, [e.id]: ev.target.value }))}
                     >
@@ -176,8 +202,12 @@ export default function AdminPage() {
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[8px] font-semibold text-[--text-muted] uppercase mb-0.5 font-mono">Assign Department</label>
                     <select
-                      className="qs-input text-sm py-1"
+                      className="qs-select text-xs py-1.5 px-2.5"
                       value={deptById[e.id] || 'general'}
                       onChange={(ev) => setDeptById((d) => ({ ...d, [e.id]: ev.target.value }))}
                     >
@@ -187,20 +217,28 @@ export default function AdminPage() {
                         </option>
                       ))}
                     </select>
-                    <button className="qs-btn-primary text-sm" onClick={() => approve(e.id)}>
+                  </div>
+
+                  <div className="flex gap-1.5 self-end mt-1 sm:mt-0">
+                    <button
+                      className="qs-btn-primary py-1.5 px-3.5 text-xs font-semibold cursor-pointer shadow-glow"
+                      onClick={() => approve(e.id)}
+                    >
                       Approve
                     </button>
-                    <button className="qs-btn-secondary text-sm" onClick={() => reject(e.id)}>
+                    <button
+                      className="qs-btn-ghost py-1.5 px-3.5 text-xs font-semibold cursor-pointer hover:bg-[var(--accent-red)]/10 hover:text-[var(--accent-red)] border border-white/5 hover:border-[var(--accent-red)]/20"
+                      onClick={() => reject(e.id)}
+                    >
                       Reject
                     </button>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        
-      </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

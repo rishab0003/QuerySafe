@@ -57,11 +57,13 @@ interface ChatState {
   messages: ChatMessage[]
   isLoading: boolean
   connectionId: string | null
+  schema: any | null
   sessionId: string
   language: string
   addMessage: (msg: ChatMessage) => void
   setLoading: (v: boolean) => void
   setConnectionId: (id: string | null) => void
+  setSchema: (schema: any | null) => void
   setLanguage: (lang: string) => void
   clearMessages: () => void
 }
@@ -69,12 +71,17 @@ interface ChatState {
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   isLoading: false,
-  connectionId: null,
+  connectionId: typeof window !== 'undefined' ? (localStorage.getItem('qs_connection_id') || null) : null,
+  schema: null,
   sessionId: `session_${Date.now()}`,
   language: 'english',
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
   setLoading: (v) => set({ isLoading: v }),
-  setConnectionId: (id) => set({ connectionId: id }),
+  setConnectionId: (id) => {
+    try { if (id) localStorage.setItem('qs_connection_id', id); else localStorage.removeItem('qs_connection_id') } catch (e) {}
+    set({ connectionId: id })
+  },
+  setSchema: (schema) => set({ schema }),
   setLanguage: (lang) => set({ language: lang }),
   clearMessages: () => set({ messages: [] }),
 }))

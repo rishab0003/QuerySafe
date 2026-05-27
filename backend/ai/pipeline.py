@@ -65,33 +65,71 @@ except Exception:
 
 def get_llm():
     """
-    Returns the configured LangChain LLM based on the AI_PROVIDER environment variable.
+    Returns an LLM instance based on environment configuration.
 
-    AI_PROVIDER=openai    → ChatOpenAI with OPENAI_MODEL (default: gpt-4-turbo)
-    AI_PROVIDER=anthropic → ChatAnthropic with ANTHROPIC_MODEL (default: claude-opus-4-5)
+    Provider priority:
+    1. Gemini – via google-generativeai (requires GEMINI_API_KEY).
+    2. Groq   – via groq.ChatCompletion (requires GROQ_API_KEY).
+    Falls back to a mock LLM if both fail.
     """
-    # If heavy AI deps are not installed, return a lightweight mock LLM
     if not _HAS_AI_DEPS:
         return _MockLLM()
 
-    provider = os.getenv("AI_PROVIDER", "anthropic").lower()
-
-    if provider == "openai":
-        from langchain_openai import ChatOpenAI
-
-        return ChatOpenAI(
-            model=os.getenv("OPENAI_MODEL", "gpt-4-turbo"),
-            temperature=0,
-            api_key=os.getenv("OPENAI_API_KEY"),
-        )
+    primary = os.getenv("AI_PROVIDER", "gemini").lower()
+    if primary == "gemini":
+        providers = ["gemini", "groq"]
+    elif primary == "groq":
+        providers = ["groq", "gemini"]
     else:
-        from langchain_anthropic import ChatAnthropic
+        providers = [primary]
 
-        return ChatAnthropic(
-            model=os.getenv("ANTHROPIC_MODEL", "claude-opus-4-5"),
-            temperature=0,
-            api_key=os.getenv("ANTHROPIC_API_KEY"),
-        )
+    for prov in providers:
+        try:
+            if prov == "gemini":
+                import google.generativeai as genai
+                genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+                model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+                class _GeminiLLM:
+                    def __init__(self, model):
+                        self.model = model
+                    def invoke(self, messages):
+                        system_prompt = ""
+                        user_prompt = ""
+                        for m in messages:
+                            if isinstance(m, SystemMessage):
+                                system_prompt = m.content
+                            elif isinstance(m, HumanMessage):
+                                user_prompt = m.content
+                        parts = [system_prompt, user_prompt] if system_prompt else [user_prompt]
+                        resp = self.model.generate_content(parts)
+                        text = "".join(p.text for p in resp.candidates[0].content.parts if hasattr(p, "text"))
+                        class _Resp:
+                            content = text
+                        return _Resp()
+                return _GeminiLLM(genai.GenerativeModel(model_name))
+            elif prov == "groq":
+                from groq import ChatCompletion
+                model_name = os.getenv("GROQ_MODEL", "mixtral-8x7b-32768")
+                class _GroqLLM:
+                    def __init__(self, model_name):
+                        self.client = ChatCompletion
+                        self.model_name = model_name
+                    def invoke(self, messages):
+                        groq_messages = []
+                        for m in messages:
+                            if isinstance(m, SystemMessage):
+                                groq_messages.append({"role": "system", "content": m.content})
+                            elif isinstance(m, HumanMessage):
+                                groq_messages.append({"role": "user", "content": m.content})
+                        resp = self.client.create(model=self.model_name, messages=groq_messages, temperature=0)
+                        content = resp.choices[0].message.content
+                        class _Resp:
+                            content = content
+                        return _Resp()
+                return _GroqLLM(model_name)
+        except Exception:
+            continue
+    return _MockLLM()
 
 
 # ---------------------------------------------------------------------------

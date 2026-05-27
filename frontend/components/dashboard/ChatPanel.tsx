@@ -1,161 +1,275 @@
 "use client"
-import React, {useState, useRef, useEffect} from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import api from '../../lib/api'
+import useAuthStore, { useChatStore } from '../../lib/store'
 import ResultTable from './ResultTable'
+import DBConnector from './DBConnector'
+import toast from 'react-hot-toast'
 
-export default function ChatPanel(){
+export default function ChatPanel() {
+  const user = useAuthStore((s) => s.user)
+  const connectionId = useChatStore((s) => s.connectionId)
+  const sessionId = useChatStore((s) => s.sessionId)
+  const messages = useChatStore((s) => s.messages)
+  const addMessage = useChatStore((s) => s.addMessage)
+  const clearMessages = useChatStore((s) => s.clearMessages)
+
   const [prompt, setPrompt] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sql, setSql] = useState<string | null>(null)
-  const [rows, setRows] = useState<Array<Record<string, any>> | null>(null)
-  const [columns, setColumns] = useState<string[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const controllerRef = useRef<AbortController | null>(null)
-  const [cursorVisible, setCursorVisible] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const chatEndRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(()=>{
-    let t: number | null = null
-    if(loading){
-      t = window.setInterval(()=> setCursorVisible(v=>!v), 500)
-    } else {
-      setCursorVisible(false)
-      if(t) { clearInterval(t); t = null }
-    }
-    return ()=>{ if(t) clearInterval(t) }
-  },[loading])
+  // Auto-scroll chat history
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-  // persist last generated SQL so Inspector can use it
-  useEffect(()=>{
-    if(typeof window === 'undefined') return
-    try{
-      if(sql !== null) localStorage.setItem('qs_last_sql', sql)
-    }catch(e){}
-  },[sql])
-
-  async function send(){
-    if(!prompt) return
+  async function send() {
+    if (!prompt.trim() || !connectionId) return
+    const currentPrompt = prompt
+    setPrompt('')
     setLoading(true)
-    setError(null)
-    setSql(null)
-    try{
-      if(controllerRef.current) controllerRef.current.abort()
-      const controller = new AbortController()
-      controllerRef.current = controller
-      // attempt streaming fetch for progressive SQL output
-      const streamRes = await fetch('/api/ai/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-        signal: controller.signal,
+    setErrorMsg(null)
+
+    // Append User Message
+    const userMsg = {
+      id: `msg_${Date.now()}_user`,
+      role: 'user' as const,
+      text: currentPrompt,
+      timestamp: Date.now(),
+    }
+    addMessage(userMsg)
+
+    try {
+      const res = await api.post('/ai/query', {
+        user_prompt: currentPrompt,
+        connection_id: connectionId,
+        session_id: sessionId,
+        role: user?.role || 'viewer',
       })
 
-      // if response is a JSON payload, parse and fallback
-      const contentType = streamRes.headers.get('content-type') || ''
-      if(contentType.includes('application/json')){
-        const data = await streamRes.json()
-        if(data?.sql) setSql(data.sql)
-        else if(typeof data === 'string') setSql(data)
-        else setSql(JSON.stringify(data))
-        if(Array.isArray(data?.rows)){
-          setRows(data.rows)
-          if(Array.isArray(data.columns)) setColumns(data.columns)
-          else if(data.rows.length) setColumns(Object.keys(data.rows[0]))
-        } else { setRows(null); setColumns(null) }
-      } else if(streamRes.body){
-        // stream text chunks
-        const reader = streamRes.body.getReader()
-        const decoder = new TextDecoder()
-        let done = false
-        let acc = ''
-        while(!done){
-          const { value, done: d } = await reader.read()
-          done = d
-          if(value){
-            const chunk = decoder.decode(value, { stream: true })
-            acc += chunk
-            setSql(acc)
-          }
+      const data = res.data
+
+      // Append Agent Message on success
+      const agentMsg = {
+        id: `msg_${Date.now()}_agent`,
+        role: 'agent' as const,
+        text: data.reasoning || 'Query executed successfully.',
+        sql: data.sql_generated,
+        confidence: data.confidence_score,
+        tablesUsed: data.tables_used,
+        reasoning: data.reasoning,
+        results: data.results,
+        rowCount: data.row_count,
+        queryTimeMs: data.query_time_ms,
+        timestamp: Date.now(),
+      }
+      addMessage(agentMsg)
+    } catch (err: any) {
+      console.error(err)
+      const errDetail = err?.response?.data?.detail
+      let detailedMsg = err?.response?.data?.detail || err?.message || 'Failed to get query results'
+
+      // Check if it is a security/RBAC violation (returned as object by FastAPI backend)
+      if (errDetail && typeof errDetail === 'object') {
+        const securityMsg = {
+          id: `msg_${Date.now()}_agent`,
+          role: 'agent' as const,
+          text: errDetail.message || 'Security validation failed.',
+          sql: errDetail.sql_generated || null,
+          isBlocked: true,
+          blockedKeywords: errDetail.blocked_keywords || [],
+          timestamp: Date.now(),
         }
-        // try to parse acc as JSON for rows
-        try{
-          const parsed = JSON.parse(acc)
-          if(parsed?.rows) {
-            setRows(parsed.rows)
-            if(parsed.columns) setColumns(parsed.columns)
-          }
-        }catch(e){ /* not JSON, ignore */ }
+        addMessage(securityMsg)
       } else {
-        setError('Empty response')
+        toast.error(detailedMsg)
+        setErrorMsg(detailedMsg)
       }
-    }
-    catch(err:any){
-      // fallback to axios if fetch fails
-      try{
-        const res = await api.post('/ai/generate', {prompt})
-        const data = res?.data
-        if(data?.sql) setSql(data.sql)
-        else if(typeof data === 'string') setSql(data)
-        else setSql(JSON.stringify(data))
-        if(Array.isArray(data?.rows)){
-          setRows(data.rows)
-          if(Array.isArray(data.columns)) setColumns(data.columns)
-          else if(data.rows.length) setColumns(Object.keys(data.rows[0]))
-        } else { setRows(null); setColumns(null) }
-      }catch(e:any){
-        setError(e?.message || 'Request failed')
-      }
-    }finally{
-      controllerRef.current = null
+    } finally {
       setLoading(false)
     }
   }
 
-  function stop(){
-    if(controllerRef.current){
-      controllerRef.current.abort()
-      controllerRef.current = null
-      setLoading(false)
-      setError('Cancelled')
-    }
+  function handleExplainInInspector(sql: string) {
+    localStorage.setItem('qs_last_sql', sql)
+    window.dispatchEvent(new Event('qs_sql_update'))
+    toast.success('Loaded query into SQL Inspector')
   }
 
-  async function copySql(){
-    if(!sql) return
-    try{ await navigator.clipboard.writeText(sql); alert('Copied SQL to clipboard') }catch(e){ alert('Copy failed') }
+  // Render Splash Setup Screen if disconnected
+  if (!connectionId) {
+    return (
+      <div className="flex-1 overflow-auto bg-[var(--bg-void)] flex items-center justify-center p-6 select-none animate-fade-in">
+        <div className="max-w-md w-full space-y-6 text-center">
+          <div className="space-y-2">
+            <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-[var(--accent-cyan)]/10 to-[var(--jade-subtle)] border border-[var(--accent-cyan)]/20 shadow-glow mb-2 text-3xl">
+              🛡️
+            </div>
+            <h2 className="text-2xl font-display font-bold tracking-tight text-[--text-primary]">
+              Connect to QuerySafe
+            </h2>
+            <p className="text-xs text-[--text-muted] leading-relaxed max-w-sm mx-auto">
+              QuerySafe acts as an intelligent, role-authorized broker between you and your database. Complete the connection below to start querying with natural language.
+            </p>
+          </div>
+          <DBConnector />
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex-1 p-6 overflow-auto">
-      <div className="h-full flex flex-col">
-        <div className="flex-1 bg-gradient-to-b from-transparent to-transparent p-4 rounded space-y-4">
-          <div className="text-sm text-[--text-muted]">Chat history (mock)</div>
-          <div className="space-y-3 mt-4">
-            <div className="self-end bg-[--bg-elevated] p-3 rounded text-sm font-mono">{prompt || 'Show top customers this quarter'}</div>
-            <div className="bg-[--bg-surface] p-3 rounded text-sm">
-              <div className="text-xs text-[--text-muted]">{loading ? 'Generating SQL...' : (error ? 'Error' : 'Generated SQL')}</div>
-              <pre className="sql-block">{loading ? (sql ?? '...') + (cursorVisible ? '|' : '') : (error ? error : (sql ?? 'No SQL yet'))}</pre>
-            </div>
-            {rows && columns && (
-              <div className="mt-3">
-                <ResultTable columns={columns} rows={rows} />
+    <div className="flex-1 flex flex-col h-screen min-h-0 bg-[var(--bg-void)]">
+      {/* Top Header info */}
+      <header className="px-6 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-[--text-primary]">AI Assistant Workspace</h2>
+          <div className="text-[10px] text-[--text-muted]">
+            Enforcing RBAC rules for <span className="text-[var(--accent-cyan)] font-mono">{user?.role}</span>
+          </div>
+        </div>
+        <button
+          onClick={clearMessages}
+          className="text-xs text-[--text-muted] hover:text-[var(--accent-red)] transition-colors px-2 py-1 rounded hover:bg-white/5 border border-white/5"
+        >
+          Clear History
+        </button>
+      </header>
+
+      {/* Message Area */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
+        {messages.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-60">
+            <div className="text-3xl">🤖</div>
+            <div className="text-sm font-medium text-[--text-secondary]">How can I help you today?</div>
+            <p className="text-xs text-[--text-muted] max-w-xs leading-relaxed">
+              Ask database questions like "Show me all transactions from sales department" or "What products have low stock?"
+            </p>
+          </div>
+        ) : (
+          messages.map((m: any) => {
+            const isUser = m.role === 'user'
+            return (
+              <div key={m.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                <div className={`max-w-[85%] rounded-2xl p-4 ${isUser ? 'bg-gradient-to-tr from-[var(--jade)] to-[var(--jade-dim)] text-black shadow-card font-medium' : 'glass-elevated border border-white/5 shadow-elevated'} space-y-3`}>
+                  {/* Text Description */}
+                  <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.text}</p>
+
+                  {/* Security / Block Warning */}
+                  {m.isBlocked && (
+                    <div className="border border-[var(--accent-red)]/30 bg-[var(--accent-red)]/10 p-3 rounded-xl space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-[var(--accent-red)]">
+                        <span>⚠️</span> SECURITY EXCLUSION TRIGGERED
+                      </div>
+                      <p className="text-[11px] text-[--text-muted] leading-relaxed">
+                        This statement was blocked. Policy forbids mutating operations (INSERT, UPDATE, DELETE) or database role-based table violations.
+                      </p>
+                      {m.blockedKeywords && m.blockedKeywords.length > 0 && (
+                        <div className="flex gap-1.5 flex-wrap">
+                          {m.blockedKeywords.map((kw: string) => (
+                            <span key={kw} className="text-[9px] font-mono px-2 py-0.5 bg-[var(--accent-red)]/20 text-[var(--accent-red)] rounded border border-[var(--accent-red)]/20">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SQL Output Box */}
+                  {m.sql && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[10px] text-[--text-muted] font-medium uppercase tracking-wider">
+                        <span>Generated SQL</span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleExplainInInspector(m.sql)}
+                            className="text-[var(--accent-cyan)] hover:underline cursor-pointer"
+                          >
+                            Explain in Inspector
+                          </button>
+                        </div>
+                      </div>
+                      <pre className="sql-block max-h-48 overflow-auto scrollbar-thin text-xs font-mono">{m.sql}</pre>
+                    </div>
+                  )}
+
+                  {/* Execution Performance Badges */}
+                  {!isUser && !m.isBlocked && (m.confidence !== undefined || m.queryTimeMs !== undefined) && (
+                    <div className="flex gap-2 flex-wrap pt-1">
+                      {m.confidence !== undefined && (
+                        <span className="qs-chip qs-chip-jade text-[10px]">
+                          🎯 Confidence: {Math.round(m.confidence * 100)}%
+                        </span>
+                      )}
+                      {m.queryTimeMs !== undefined && (
+                        <span className="qs-chip text-[10px]">
+                          ⚡ {m.queryTimeMs}ms
+                        </span>
+                      )}
+                      {m.rowCount !== undefined && (
+                        <span className="qs-chip text-[10px]">
+                          📋 {m.rowCount} Rows
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Results Display */}
+                  {m.results && m.results.length > 0 && (
+                    <div className="mt-2.5">
+                      <ResultTable
+                        columns={Object.keys(m.results[0])}
+                        rows={m.results}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+            )
+          })
+        )}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="glass p-4 rounded-2xl flex items-center gap-3">
+              <span className="text-xs text-[--text-muted]">AI is compiling schema & generating query</span>
+              <div className="flex gap-1.5">
+                <span className="loading-dot"></span>
+                <span className="loading-dot"></span>
+                <span className="loading-dot"></span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="mt-4">
-          <div className="p-3 bg-[--bg-surface] rounded flex items-center gap-3">
-            <input value={prompt} onChange={e=>setPrompt(e.target.value)} className="qs-input flex-1" placeholder="Ask anything about your data..." />
-            {loading ? (
-              <button onClick={stop} className="qs-btn-ghost">Stop</button>
-            ) : (
-              <button onClick={send} className="qs-btn-primary" disabled={loading}>{loading ? '...' : 'Send'}</button>
-            )}
-            {!loading && sql && (
-              <button onClick={copySql} className="qs-btn-ghost">Copy</button>
-            )}
-          </div>
-        </div>
+        )}
+        <div ref={chatEndRef} />
       </div>
+
+      {/* Input Box */}
+      <footer className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            send()
+          }}
+          className="flex gap-3 items-center max-w-4xl mx-auto"
+        >
+          <input
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            disabled={loading}
+            className="qs-input flex-1 py-3 px-4 rounded-xl text-sm"
+            placeholder="Type your data question (e.g. 'Show me products by category')..."
+          />
+          <button
+            type="submit"
+            disabled={loading || !prompt.trim()}
+            className="qs-btn-primary py-3 px-5 font-semibold text-sm cursor-pointer shadow-glow"
+          >
+            {loading ? 'Executing' : 'Run Query'}
+          </button>
+        </form>
+      </footer>
     </div>
   )
 }
