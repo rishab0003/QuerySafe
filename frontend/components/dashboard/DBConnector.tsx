@@ -94,12 +94,12 @@ export default function DBConnector() {
             </span>
             <h3 className="font-semibold text-sm tracking-wider uppercase text-[var(--accent-cyan)]">Database Connected</h3>
           </div>
-          <span className="text-xs font-mono bg-white/5 px-2 py-0.5 rounded text-[--text-muted]">
+          <span className="text-xs font-mono bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded text-[--text-muted]">
             ID: {connectionId.slice(0, 8)}...
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-xs bg-black/25 p-3 rounded-xl border border-white/5 font-mono">
+        <div className="grid grid-cols-2 gap-3 text-xs bg-black/5 dark:bg-black/25 p-3 rounded-xl border border-[var(--border-subtle)] font-mono">
           <div>
             <span className="text-[--text-muted] block">TYPE</span>
             <span className="text-[--text-primary] capitalize">{form.type}</span>
@@ -230,7 +230,7 @@ export default function DBConnector() {
             type="checkbox"
             checked={form.allow_write}
             onChange={(e) => setForm({ ...form, allow_write: e.target.checked })}
-            className="rounded border-gray-300 text-[var(--accent-cyan)] focus:ring-[var(--accent-cyan)] h-4 w-4 bg-black/45 cursor-pointer"
+            className="rounded border-gray-300 text-[var(--accent-cyan)] focus:ring-[var(--accent-cyan)] h-4 w-4 bg-black/10 dark:bg-black/45 cursor-pointer"
           />
           <label htmlFor="allow_write" className="text-[11px] font-semibold text-[--text-muted] uppercase cursor-pointer select-none">
             Allow Write Operations (Update & Change Data)

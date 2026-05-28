@@ -149,8 +149,8 @@ export default function SuperAdminPage() {
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         {/* Form panel */}
-        <form onSubmit={handleSubmit} className="glass p-6 rounded-2xl border border-white/5 shadow-card space-y-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[--text-secondary] border-b border-white/5 pb-2">
+        <form onSubmit={handleSubmit} className="glass p-6 rounded-2xl border border-[var(--border-subtle)] shadow-card space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[--text-secondary] border-b border-[var(--border-subtle)] pb-2">
             Provision New Employee Credentials
           </h3>
 
@@ -232,8 +232,8 @@ export default function SuperAdminPage() {
 
         {/* Info & Created view */}
         <div className="space-y-6">
-          <div className="glass p-5 rounded-2xl border border-white/5 shadow-card space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-[--text-muted] border-b border-white/5 pb-1">
+          <div className="glass p-5 rounded-2xl border border-[var(--border-subtle)] shadow-card space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-[--text-muted] border-b border-[var(--border-subtle)] pb-1">
               Workspace Administration
             </h4>
             <p className="text-xs text-[--text-muted] leading-relaxed">
@@ -244,7 +244,7 @@ export default function SuperAdminPage() {
           {createdUser && (
             <div className="glass-elevated p-5 rounded-2xl border border-[var(--accent-cyan)]/30 shadow-glow space-y-2.5 animate-fade-in">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-cyan)]">Account Created</h4>
-              <div className="space-y-1 text-xs font-mono bg-black/20 p-3 rounded-xl border border-white/5">
+              <div className="space-y-1 text-xs font-mono bg-black/5 dark:bg-black/20 p-3 rounded-xl border border-[var(--border-subtle)]">
                 <div><span className="text-[--text-muted]">EMAIL:</span> {createdUser.email}</div>
                 <div><span className="text-[--text-muted]">NAME:</span> {createdUser.full_name}</div>
                 <div><span className="text-[--text-muted]">ROLE:</span> {createdUser.role}</div>
@@ -255,7 +255,7 @@ export default function SuperAdminPage() {
           )}
 
           {/* User Management List */}
-          <div className="glass p-5 rounded-2xl border border-white/5 shadow-card space-y-4">
+          <div className="glass p-5 rounded-2xl border border-[var(--border-subtle)] shadow-card space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-[--text-secondary]">User Register</h4>
@@ -271,9 +271,9 @@ export default function SuperAdminPage() {
               </button>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-white/5 scrollbar-thin">
+            <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)] scrollbar-thin">
               <table className="min-w-full text-xs text-left font-mono">
-                <thead className="bg-white/5 text-[--text-muted]">
+                <thead className="bg-black/5 dark:bg-white/5 text-[--text-muted]">
                   <tr>
                     <th className="px-3 py-2.5 text-left font-semibold">Email</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Name</th>
@@ -284,7 +284,7 @@ export default function SuperAdminPage() {
                     <th className="px-3 py-2.5 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-[var(--border-subtle)]">
                   {users.length === 0 ? (
                     <tr>
                       <td className="px-3 py-4 text-[--text-muted] text-center" colSpan={7}>
@@ -293,13 +293,13 @@ export default function SuperAdminPage() {
                     </tr>
                   ) : (
                     users.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="px-3 py-2.5 text-white max-w-[120px] truncate" title={entry.email}>
+                      <tr key={entry.id} className="hover:bg-black/5 dark:hover:bg-white/[0.02] transition-colors">
+                        <td className="px-3 py-2.5 text-[--text-primary] max-w-[120px] truncate" title={entry.email}>
                           {entry.email}
                         </td>
-                        <td className="px-3 py-2.5 text-white/80 max-w-[100px] truncate">{entry.full_name}</td>
+                        <td className="px-3 py-2.5 text-[--text-primary] max-w-[100px] truncate">{entry.full_name}</td>
                         <td className="px-3 py-2.5 text-[var(--accent-cyan)]">{entry.role}</td>
-                        <td className="px-3 py-2.5 text-white/70 capitalize">{entry.department}</td>
+                        <td className="px-3 py-2.5 text-[--text-muted] capitalize">{entry.department}</td>
                         <td className="px-3 py-2.5">
                           <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${
                             entry.approval_status === 'approved' ? 'bg-[var(--accent-green)]/15 text-[var(--accent-green)]' :

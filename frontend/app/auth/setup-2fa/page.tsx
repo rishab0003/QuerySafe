@@ -105,35 +105,38 @@ export default function Setup2FA(){
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md glass p-8 rounded-lg">
-        <h2 className="text-2xl font-display mb-4">Setup 2FA</h2>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--bg-void)]">
+      <div className="w-full max-w-md glass p-8 rounded-2xl border border-[var(--border-subtle)] shadow-card">
+        <h2 className="text-2xl font-display mb-4 text-[--text-primary]">Setup 2FA</h2>
         {!qr && (
-          <form onSubmit={handleRequestSetup} className="space-y-3">
-            <p className="text-sm text-ink-400 mb-2">Choose setup method and enter your email.</p>
-            <div className="flex gap-3 mb-2">
-              <label className="inline-flex items-center"><input type="radio" name="method" checked={method==='qr'} onChange={()=>setMethod('qr')} /> <span className="ml-2">Authenticator App (QR)</span></label>
-              <label className="inline-flex items-center"><input type="radio" name="method" checked={method==='email'} onChange={()=>setMethod('email')} /> <span className="ml-2">Email OTP</span></label>
+          <form onSubmit={handleRequestSetup} className="space-y-4">
+            <p className="text-sm text-[--text-muted] mb-2">Choose setup method and enter your email.</p>
+            <div className="flex flex-col sm:flex-row gap-3 mb-2 text-sm text-[--text-primary]">
+              <label className="inline-flex items-center cursor-pointer">
+                <input type="radio" name="method" checked={method==='qr'} onChange={()=>setMethod('qr')} className="accent-[var(--accent-cyan)]" /> 
+                <span className="ml-2">Authenticator App (QR)</span>
+              </label>
+              <label className="inline-flex items-center cursor-pointer">
+                <input type="radio" name="method" checked={method==='email'} onChange={()=>setMethod('email')} className="accent-[var(--accent-cyan)]" /> 
+                <span className="ml-2">Email OTP</span>
+              </label>
             </div>
             <input className="qs-input" placeholder="you@example.com" value={email} onChange={(e)=>setEmail(e.target.value)} disabled={loading} />
-            <button className="qs-btn-primary w-full" disabled={loading}>Request</button>
+            <button className="qs-btn-primary w-full py-3 text-xs font-semibold cursor-pointer shadow-glow" disabled={loading}>Request Setup</button>
           </form>
         )}
 
         {qr && (
-          <form onSubmit={handleVerify} className="space-y-3">
-            <p className="text-sm text-ink-400">Scan the QR with your authenticator app and enter the 6-digit code.</p>
-            <div className="mb-4 p-4 bg-white/4 rounded flex items-center justify-center">
-              {qr ? <img src={qr} alt="2FA QR" /> : <div className="text-ink-400">QR not available</div>}
+          <form onSubmit={handleVerify} className="space-y-4">
+            <p className="text-sm text-[--text-muted]">Scan the QR with your authenticator app and enter the 6-digit code.</p>
+            <div className="mb-4 p-4 bg-white dark:bg-zinc-900 rounded-xl border border-[var(--border-subtle)] flex items-center justify-center">
+              {qr ? <img src={qr} alt="2FA QR" className="rounded-lg shadow-sm" /> : <div className="text-[--text-muted]">QR not available</div>}
             </div>
-            {secret && <div className="text-xs text-ink-400 mb-1">Secret: {secret}</div>}
+            {secret && <div className="text-xs text-[--text-muted] mb-1 font-mono">Secret: {secret}</div>}
             <input className="qs-input" placeholder="123456" value={code} onChange={(e)=>setCode(e.target.value)} disabled={loading} />
-            <button className="qs-btn-primary w-full" disabled={loading}>Verify</button>
+            <button className="qs-btn-primary w-full py-3 text-xs font-semibold cursor-pointer shadow-glow" disabled={loading}>Verify</button>
           </form>
         )}
-        {/* If OTP was returned directly (dev fallback), show it for convenience */}
-        {/* Note: this is only displayed if backend returns otp_code as part of setup response */}
-        {/* The verify form above will still accept the code */}
       </div>
     </div>
   )

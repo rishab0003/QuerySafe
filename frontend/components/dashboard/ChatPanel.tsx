@@ -131,7 +131,7 @@ export default function ChatPanel() {
         </div>
         <button
           onClick={clearMessages}
-          className="text-xs text-[--text-muted] hover:text-[var(--accent-red)] transition-colors px-2 py-1 rounded hover:bg-white/5 border border-white/5"
+          className="text-xs text-[--text-muted] hover:text-[var(--accent-red)] transition-colors px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/5 border border-[var(--border-subtle)]"
         >
           Clear History
         </button>
@@ -152,7 +152,7 @@ export default function ChatPanel() {
             const isUser = m.role === 'user'
             return (
               <div key={m.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                <div className={`max-w-[85%] rounded-2xl p-4 ${isUser ? 'bg-gradient-to-tr from-[var(--jade)] to-[var(--jade-dim)] text-black shadow-card font-medium' : 'glass-elevated border border-white/5 shadow-elevated'} space-y-3`}>
+                <div className={`max-w-[85%] rounded-2xl p-4 ${isUser ? 'bg-gradient-to-tr from-[var(--jade)] to-[var(--jade-dim)] text-black shadow-card font-medium' : 'glass-elevated border border-[var(--border-subtle)] shadow-elevated'} space-y-3`}>
                   {/* Text Description */}
                   <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.text}</p>
 

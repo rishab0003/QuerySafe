@@ -147,6 +147,20 @@ export default function ChartGenerator() {
   const [isDemoMode, setIsDemoMode] = useState(!connectionId)
   const [dashboardTitle, setDashboardTitle] = useState('Workspace Dashboards')
   const [charts, setCharts] = useState<LoadedChart[]>([])
+  const [isDarkTheme, setIsDarkTheme] = useState(true)
+
+  // Detect theme class on document element
+  useEffect(() => {
+    const checkTheme = () => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setIsDarkTheme(isDark)
+    }
+    checkTheme()
+
+    const observer = new MutationObserver(checkTheme)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    return () => observer.disconnect()
+  }, [])
 
   // Automatically switch mode if connection state changes
   useEffect(() => {
@@ -315,7 +329,7 @@ export default function ChartGenerator() {
   function renderChartContent(c: LoadedChart) {
     if (c.loading) {
       return (
-        <div className="h-56 flex flex-col items-center justify-center space-y-3 bg-black/10 rounded-xl">
+        <div className="h-56 flex flex-col items-center justify-center space-y-3 bg-black/5 dark:bg-black/10 rounded-xl">
           <div className="flex gap-1.5">
             <span className="loading-dot bg-[var(--accent-cyan)]"></span>
             <span className="loading-dot bg-[var(--accent-cyan)]"></span>
@@ -338,22 +352,26 @@ export default function ChartGenerator() {
 
     if (c.data.length === 0) {
       return (
-        <div className="h-56 flex items-center justify-center bg-black/10 rounded-xl text-xs text-[--text-muted]">
+        <div className="h-56 flex items-center justify-center bg-black/5 dark:bg-black/10 rounded-xl text-xs text-[--text-muted]">
           No data returned from database execution.
         </div>
       )
     }
 
     const color = c.spec.color || '#00C896'
+    const tickColor = isDarkTheme ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.5)"
+    const tooltipStyle = isDarkTheme 
+      ? { backgroundColor: '#0c0f17', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }
+      : { backgroundColor: '#ffffff', border: '1px solid rgba(0,0,0,0.15)', borderRadius: '8px', color: '#000' }
 
     switch (c.spec.type) {
       case 'BarChart':
         return (
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={c.data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <XAxis dataKey={c.spec.x_axis} stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
-              <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#0c0f17', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+              <XAxis dataKey={c.spec.x_axis} stroke={tickColor} fontSize={10} tickLine={false} />
+              <YAxis stroke={tickColor} fontSize={10} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Bar dataKey={c.spec.y_axis} fill={color} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -368,9 +386,9 @@ export default function ChartGenerator() {
                   <stop offset="95%" stopColor={color} stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey={c.spec.x_axis} stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
-              <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#0c0f17', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+              <XAxis dataKey={c.spec.x_axis} stroke={tickColor} fontSize={10} tickLine={false} />
+              <YAxis stroke={tickColor} fontSize={10} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Area type="monotone" dataKey={c.spec.y_axis} stroke={color} fillOpacity={1} fill={`url(#gradient-${c.spec.title})`} />
             </AreaChart>
           </ResponsiveContainer>
@@ -393,7 +411,7 @@ export default function ChartGenerator() {
                   <Cell key={`cell-${index}`} fill={index === 0 ? color : `${color}${90 - index * 20}`} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ backgroundColor: '#0c0f17', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '9px', opacity: 0.8 }} />
             </PieChart>
           </ResponsiveContainer>
@@ -403,9 +421,9 @@ export default function ChartGenerator() {
         return (
           <ResponsiveContainer width="100%" height={230}>
             <LineChart data={c.data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-              <XAxis dataKey={c.spec.x_axis} stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
-              <YAxis stroke="rgba(255,255,255,0.4)" fontSize={10} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#0c0f17', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+              <XAxis dataKey={c.spec.x_axis} stroke={tickColor} fontSize={10} tickLine={false} />
+              <YAxis stroke={tickColor} fontSize={10} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
               <Line type="monotone" dataKey={c.spec.y_axis} stroke={color} strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
@@ -432,7 +450,7 @@ export default function ChartGenerator() {
               Live Database Mode
             </span>
           ) : (
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-white/5 text-[--text-muted] border border-white/10 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-black/5 dark:bg-white/5 text-[--text-muted] border border-[var(--border-subtle)] px-2.5 py-1 rounded-full flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-[--text-muted]"></span>
               Demo Mode Active
             </span>
@@ -442,7 +460,7 @@ export default function ChartGenerator() {
 
       {/* Demo Preset Selection (displayed only if no database is connected) */}
       {isDemoMode && (
-        <div className="glass p-5 rounded-2xl border border-white/5 space-y-3">
+        <div className="glass p-5 rounded-2xl border border-[var(--border-subtle)] space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-[--text-muted]">Select a Demo Preset</h3>
             <span className="text-[10px] text-[var(--accent-cyan)] font-medium">No DB Connected</span>
@@ -452,7 +470,7 @@ export default function ChartGenerator() {
               <button
                 key={preset.name}
                 onClick={() => loadDemo(preset)}
-                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-xs font-medium rounded-xl border border-white/5 hover:border-white/10 transition-all cursor-pointer"
+                className="px-4 py-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-xs font-medium rounded-xl border border-[var(--border-subtle)] transition-all cursor-pointer"
               >
                 📊 {preset.name} Preset
               </button>
@@ -490,7 +508,7 @@ export default function ChartGenerator() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {charts.map((c, i) => (
-              <div key={i} className="glass p-5 rounded-2xl border border-white/5 shadow-card space-y-4 flex flex-col justify-between">
+              <div key={i} className="glass p-5 rounded-2xl border border-[var(--border-subtle)] shadow-card space-y-4 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between gap-4 mb-1">
                     <h4 className="text-sm font-semibold text-[--text-primary] truncate">{c.spec.title}</h4>
@@ -511,12 +529,12 @@ export default function ChartGenerator() {
 
                 {/* Collapsible SQL preview */}
                 {!c.loading && !c.error && (
-                  <details className="text-[10px] text-[--text-muted] font-mono border-t border-white/5 pt-3 group">
+                  <details className="text-[10px] text-[--text-muted] font-mono border-t border-[var(--border-subtle)] pt-3 group">
                     <summary className="cursor-pointer hover:text-[--text-secondary] select-none list-none flex justify-between items-center">
                       <span>👁️ View Generated Source SQL</span>
                       <span className="group-open:rotate-180 transition-transform">▼</span>
                     </summary>
-                    <pre className="mt-2 p-2 bg-black/35 rounded-lg border border-white/5 overflow-x-auto text-[9px] text-[var(--accent-cyan)] font-mono whitespace-pre">
+                    <pre className="mt-2 p-2 bg-black/5 dark:bg-black/35 rounded-lg border border-[var(--border-subtle)] overflow-x-auto text-[9px] text-[var(--accent-cyan)] font-mono whitespace-pre">
                       {c.spec.sql}
                     </pre>
                   </details>

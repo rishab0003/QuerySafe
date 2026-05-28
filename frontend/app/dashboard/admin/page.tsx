@@ -160,13 +160,13 @@ export default function AdminPage() {
           Loading records...
         </div>
       ) : filteredEmployees.length === 0 ? (
-        <div className="glass p-8 rounded-2xl text-center text-xs text-[--text-muted] border border-white/5 shadow-card">
+        <div className="glass p-8 rounded-2xl text-center text-xs text-[--text-muted] border border-[var(--border-subtle)] shadow-card">
           No employee records found in this list.
         </div>
       ) : (
         <div className="space-y-4">
           {filteredEmployees.map((e) => (
-            <div key={e.id} className="glass p-5 rounded-2xl border border-white/5 shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div key={e.id} className="glass p-5 rounded-2xl border border-[var(--border-subtle)] shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-sm text-[--text-primary]">{e.full_name || 'Anonymous User'}</span>
@@ -181,14 +181,14 @@ export default function AdminPage() {
                 <div className="text-xs text-[--text-muted] mt-0.5 font-mono">{e.email}</div>
                 {e.approval_status === 'approved' && (
                   <div className="text-[10px] text-[--text-muted] mt-1.5 flex gap-2">
-                    <span className="bg-white/5 px-2 py-0.5 rounded">Role: {e.role}</span>
-                    <span className="bg-white/5 px-2 py-0.5 rounded capitalize">Dept: {e.department}</span>
+                    <span className="bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">Role: {e.role}</span>
+                    <span className="bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded capitalize">Dept: {e.department}</span>
                   </div>
                 )}
               </div>
 
               {e.approval_status === 'pending' && (
-                <div className="flex flex-wrap items-center gap-2.5 bg-black/15 p-3 rounded-xl border border-white/5">
+                <div className="flex flex-wrap items-center gap-2.5 bg-black/5 dark:bg-black/15 p-3 rounded-xl border border-[var(--border-subtle)]">
                   <div>
                     <label className="block text-[8px] font-semibold text-[--text-muted] uppercase mb-0.5 font-mono">Assign Role</label>
                     <select
@@ -227,7 +227,7 @@ export default function AdminPage() {
                       Approve
                     </button>
                     <button
-                      className="qs-btn-ghost py-1.5 px-3.5 text-xs font-semibold cursor-pointer hover:bg-[var(--accent-red)]/10 hover:text-[var(--accent-red)] border border-white/5 hover:border-[var(--accent-red)]/20"
+                      className="qs-btn-ghost py-1.5 px-3.5 text-xs font-semibold cursor-pointer hover:bg-[var(--accent-red)]/10 hover:text-[var(--accent-red)] border border-[var(--border-subtle)] hover:border-[var(--accent-red)]/20"
                       onClick={() => reject(e.id)}
                     >
                       Reject

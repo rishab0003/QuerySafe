@@ -566,3 +566,12 @@ select.qs-input::-ms-expand { display: none; }
 .marquee-item { padding: 10px 18px; border-radius:999px; background: var(--glass-highlight); border: 1px solid var(--glass-border); color:var(--text-primary); font-weight:600 }
 @keyframes marquee { 0% { transform: translateX(0) } 100% { transform: translateX(-50%) } }
 
+.bg-surface-base { background-color: var(--bg-surface) !important; }
+.text-white { color: var(--text-primary) !important; }
+.dark .text-white { color: #fff !important; }
+
+/* Theme‑aware text utilities */
+.text-primary { color: var(--text-primary) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-zinc-300, .text-zinc-400, .text-zinc-200 { color: var(--text-muted) !important; }
+.text-zinc-500 { color: var(--text-primary) !important; }

@@ -103,7 +103,7 @@ export default function Inspector() {
         <textarea
           value={sql}
           onChange={(e) => setSql(e.target.value)}
-          className="w-full font-mono text-xs p-3.5 bg-black/35 text-[var(--accent-cyan)] rounded-xl border border-white/5 outline-none focus:border-[var(--accent-cyan)]/30 focus:shadow-glow scrollbar-thin"
+          className="w-full font-mono text-xs p-3.5 bg-black/5 dark:bg-black/35 text-[var(--accent-cyan)] rounded-xl border border-[var(--border-subtle)] outline-none focus:border-[var(--accent-cyan)]/30 focus:shadow-glow scrollbar-thin"
           rows={7}
           placeholder="-- Enter or edit SQL here..."
         />
@@ -135,12 +135,12 @@ export default function Inspector() {
             <p className="text-xs text-[--text-primary] leading-relaxed">{explainData.explanation}</p>
           </div>
 
-          <div className="glass p-4 rounded-xl border border-white/5 space-y-2">
+          <div className="glass p-4 rounded-xl border border-[var(--border-subtle)] space-y-2">
             <h4 className="text-[10px] font-semibold text-[--text-muted] uppercase tracking-wider font-mono">Tables & Collections Used</h4>
             <p className="text-xs text-[--text-secondary] leading-relaxed">{explainData.why_these_tables}</p>
           </div>
 
-          <div className="glass p-4 rounded-xl border border-white/5 space-y-2">
+          <div className="glass p-4 rounded-xl border border-[var(--border-subtle)] space-y-2">
             <h4 className="text-[10px] font-semibold text-[--text-muted] uppercase tracking-wider font-mono">Assumptions Made</h4>
             <p className="text-xs text-[--text-secondary] leading-relaxed font-mono">{explainData.assumptions_made}</p>
           </div>
@@ -156,11 +156,11 @@ export default function Inspector() {
           </div>
 
           {runResults.length === 0 ? (
-            <div className="bg-black/15 border border-white/5 p-4 rounded-xl text-center text-xs text-[--text-muted]">
+            <div className="bg-black/5 dark:bg-black/15 border border-[var(--border-subtle)] p-4 rounded-xl text-center text-xs text-[--text-muted]">
               No rows returned.
             </div>
           ) : (
-            <div className="flex-1 overflow-auto border border-white/5 rounded-xl bg-black/15 p-2 scrollbar-thin max-h-80">
+            <div className="flex-1 overflow-auto border border-[var(--border-subtle)] rounded-xl bg-black/5 dark:bg-black/15 p-2 scrollbar-thin max-h-80">
               {runColumns && (
                 <ResultTable
                   columns={runColumns}

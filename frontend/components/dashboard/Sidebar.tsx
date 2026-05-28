@@ -75,11 +75,11 @@ export default function Sidebar() {
           <div className="text-[10px] font-semibold text-[--text-muted] uppercase tracking-wider">
             Schema Explorer
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin bg-black/15 border border-white/5 rounded-xl p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto scrollbar-thin bg-black/5 dark:bg-black/15 border border-[var(--border-subtle)] rounded-xl p-2 space-y-1">
             {schema.tables.map((t: any) => {
               const isOpen = expandedTable === t.name
               return (
-                <div key={t.name} className="rounded-lg overflow-hidden transition-all bg-white/[0.01] hover:bg-white/[0.03]">
+                <div key={t.name} className="rounded-lg overflow-hidden transition-all bg-transparent hover:bg-black/5 dark:hover:bg-white/[0.03]">
                   <button
                     onClick={() => toggleTable(t.name)}
                     className="w-full flex items-center justify-between p-2 text-left font-mono text-[11px] text-[--text-primary]"
@@ -92,10 +92,10 @@ export default function Sidebar() {
                     </span>
                   </button>
                   {isOpen && (
-                    <div className="px-3 pb-2 pt-0.5 border-t border-white/5 bg-black/20 space-y-1">
+                    <div className="px-3 pb-2 pt-0.5 border-t border-[var(--border-subtle)] bg-black/5 dark:bg-black/20 space-y-1">
                       {t.columns.map((c: any) => (
                         <div key={c.name} className="flex justify-between font-mono text-[9px] text-[--text-muted]">
-                          <span className="truncate text-white/70">{c.name}</span>
+                          <span className="truncate text-[--text-primary] dark:text-white/70">{c.name}</span>
                           <span className="text-[var(--accent-cyan)] font-light">{c.type.toLowerCase()}</span>
                         </div>
                       ))}
@@ -114,9 +114,9 @@ export default function Sidebar() {
           <div className="text-[10px] font-semibold text-[--text-muted] uppercase tracking-wider mb-1.5">
             Sample DB Queries
           </div>
-          <div className="space-y-1 bg-black/15 p-2.5 rounded-xl border border-white/5 text-[10px] font-mono text-[--text-muted]">
-            <div className="truncate border-b border-white/5 pb-1">SELECT * FROM sales LIMIT 5</div>
-            <div className="truncate border-b border-white/5 py-1">SELECT COUNT(*) FROM products</div>
+          <div className="space-y-1 bg-black/5 dark:bg-black/15 p-2.5 rounded-xl border border-[var(--border-subtle)] text-[10px] font-mono text-[--text-muted]">
+            <div className="truncate border-b border-[var(--border-subtle)] pb-1">SELECT * FROM sales LIMIT 5</div>
+            <div className="truncate border-b border-[var(--border-subtle)] py-1">SELECT COUNT(*) FROM products</div>
             <div className="truncate pt-1">SELECT * FROM employees</div>
           </div>
         </div>
@@ -129,19 +129,19 @@ export default function Sidebar() {
         </div>
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium hover:bg-white/5 transition-all text-[--text-primary]"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-all text-[--text-primary]"
         >
           <span>💬</span> AI Workspace
         </Link>
         <Link
           href="/dashboard/charts"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium hover:bg-white/5 transition-all text-[--text-primary]"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-all text-[--text-primary]"
         >
           <span>📊</span> Dynamic Dashboards
         </Link>
 
         {user?.role === 'admin' && (
-          <div className="pt-2 border-t border-white/5 space-y-1">
+          <div className="pt-2 border-t border-[var(--border-subtle)] space-y-1">
             <Link
               href="/dashboard/admin"
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium text-[var(--accent-cyan)] hover:bg-[var(--accent-cyan)]/10 transition-all"
