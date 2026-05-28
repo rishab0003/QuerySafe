@@ -108,6 +108,19 @@ export default function SuperAdminPage() {
     }
   }
 
+  async function handleDeleteUser(id: string, email: string) {
+    if (!window.confirm(`Are you sure you want to delete user ${email}?`)) {
+      return
+    }
+    try {
+      await api.delete(`/admin/users/${id}`)
+      toast.success('User deleted successfully')
+      loadUsers()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to delete user')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 p-8 text-xs text-[--text-muted]">
@@ -268,12 +281,13 @@ export default function SuperAdminPage() {
                     <th className="px-3 py-2.5 text-left font-semibold">Dept</th>
                     <th className="px-3 py-2.5 text-left font-semibold">Status</th>
                     <th className="px-3 py-2.5 text-left font-semibold">2FA</th>
+                    <th className="px-3 py-2.5 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {users.length === 0 ? (
                     <tr>
-                      <td className="px-3 py-4 text-[--text-muted] text-center" colSpan={6}>
+                      <td className="px-3 py-4 text-[--text-muted] text-center" colSpan={7}>
                         No records loaded.
                       </td>
                     </tr>
@@ -296,6 +310,16 @@ export default function SuperAdminPage() {
                         </td>
                         <td className="px-3 py-2.5 text-[--text-muted]">
                           {entry.is_2fa_enabled ? 'Active' : 'Off'}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUser(entry.id, entry.email)}
+                            disabled={entry.id === user?.id}
+                            className="text-[10px] font-semibold text-[var(--accent-red)] border border-[var(--accent-red)]/20 px-2 py-1 rounded bg-[var(--accent-red)]/5 hover:bg-[var(--accent-red)]/15 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))

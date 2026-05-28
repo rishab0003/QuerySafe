@@ -162,7 +162,7 @@ async def _fetch_schema(connection_id: str, token: str) -> dict:
             ) from exc
 
 
-async def _execute_query(connection_id: str, sql: str, token: str) -> dict:
+async def _execute_query(connection_id: str, sql: str, token: str, role: str) -> dict:
     """
     Calls Person 3's POST /database/execute endpoint.
     Returns { rows: list, metadata: dict }.
@@ -172,7 +172,7 @@ async def _execute_query(connection_id: str, sql: str, token: str) -> dict:
         try:
             resp = await client.post(
                 f"{DATABASE_SERVICE_URL}/database/execute",
-                json={"connection_id": connection_id, "sql": sql},
+                json={"connection_id": connection_id, "sql": sql, "role": role},
                 headers={"Authorization": f"Bearer {token}"},
             )
             resp.raise_for_status()
@@ -256,22 +256,23 @@ async def query_endpoint(
     generated_sql = pipeline_result["sql"]
 
     # ── Step 4: Validate SQL safety via Security service ───────────────────
-    safety_result = await _validate_sql_safety(generated_sql, token)
+    if user_role.strip().lower() != "admin":
+        safety_result = await _validate_sql_safety(generated_sql, token)
 
-    if not safety_result.get("is_safe", False):
-        blocked = safety_result.get("blocked_keywords", [])
-        reason = safety_result.get("reason", "SQL failed safety validation.")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "message": reason,
-                "blocked_keywords": blocked,
-                "sql_generated": generated_sql,
-            },
-        )
+        if not safety_result.get("is_safe", False):
+            blocked = safety_result.get("blocked_keywords", [])
+            reason = safety_result.get("reason", "SQL failed safety validation.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": reason,
+                    "blocked_keywords": blocked,
+                    "sql_generated": generated_sql,
+                },
+            )
 
     # ── Step 5: Execute validated SQL against the database ─────────────────
-    execution_result = await _execute_query(body.connection_id, generated_sql, token)
+    execution_result = await _execute_query(body.connection_id, generated_sql, token, user_role)
 
     raw_rows: list = execution_result.get("rows", [])
 

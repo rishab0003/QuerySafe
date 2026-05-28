@@ -32,6 +32,7 @@ class PostgresAdapter(BaseDBAdapter):
         user = config.get("user")
         password = config.get("password")
         database = config.get("database")
+        allow_write = config.get("allow_write", False)
 
         # Construct SQLAlchemy connection URI
         connection_uri = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}"
@@ -41,24 +42,31 @@ class PostgresAdapter(BaseDBAdapter):
             "options": "-c statement_timeout=10000"
         }
 
-        # Create engine with read-only execution options
-        self.engine = create_engine(
-            connection_uri,
-            connect_args=connect_args,
-            execution_options={"postgresql_readonly": True}
-        )
+        # Create engine with read-only execution options if not allow_write
+        if allow_write:
+            self.engine = create_engine(
+                connection_uri,
+                connect_args=connect_args
+            )
+        else:
+            self.engine = create_engine(
+                connection_uri,
+                connect_args=connect_args,
+                execution_options={"postgresql_readonly": True}
+            )
 
-        # Enforce read-only mode at the database level by listening to connect events
-        @event.listens_for(self.engine, "connect")
-        def set_readonly(dbapi_connection, connection_record):
-            cursor = dbapi_connection.cursor()
-            try:
-                cursor.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;")
-            except Exception:
-                # Fallback check if execution fails
-                pass
-            finally:
-                cursor.close()
+            # Enforce read-only mode at the database level by listening to connect events
+            @event.listens_for(self.engine, "connect")
+            def set_readonly(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                try:
+                    cursor.execute("SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY;")
+                    dbapi_connection.commit()
+                except Exception:
+                    # Fallback check if execution fails
+                    pass
+                finally:
+                    cursor.close()
 
         # Test the connection immediately
         try:
@@ -80,10 +88,10 @@ class PostgresAdapter(BaseDBAdapter):
         self, query: str, timeout: int = 10, limit: int = 500
     ) -> Tuple[List[Dict[str, Any]], int, float]:
         """
-        Execute a read-only query on PostgreSQL.
+        Execute a query on PostgreSQL (read-only or read-write based on config).
 
         Args:
-            query: The SELECT query string.
+            query: The SQL query string.
             timeout: Query timeout in seconds (driver level is 10s).
             limit: Maximum rows to return (up to 500).
 
@@ -93,7 +101,6 @@ class PostgresAdapter(BaseDBAdapter):
         if not self.engine:
             raise RuntimeError("Database not connected. Call connect() first.")
 
-        # Ensure query is executed in a read-only context
         start_time = time.perf_counter()
         rows = []
         
@@ -103,14 +110,18 @@ class PostgresAdapter(BaseDBAdapter):
                 conn.execute(text(f"SET statement_timeout = {timeout * 1000}"))
                 result = conn.execute(text(query))
                 
-                # Fetch up to the limit
-                fetched_rows = result.fetchmany(limit)
-                
-                # Format each row into a dictionary
-                for row in fetched_rows:
-                    rows.append(dict(row._mapping))
-                
-                row_count = len(rows)
+                # Fetch up to the limit if query returns rows
+                if result.returns_rows:
+                    fetched_rows = result.fetchmany(limit)
+                    # Format each row into a dictionary
+                    for row in fetched_rows:
+                        rows.append(dict(row._mapping))
+                    row_count = len(rows)
+                else:
+                    # For non-SELECT (mutating query), commit explicitly
+                    conn.commit()
+                    rows = [{"affected_rows": result.rowcount}]
+                    row_count = 1
         except Exception as exc:
             raise RuntimeError(f"PostgreSQL query execution failed: {exc}") from exc
 

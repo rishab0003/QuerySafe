@@ -19,7 +19,7 @@ from ai.pipeline import get_llm
 # ---------------------------------------------------------------------------
 ROLE_TABLE_ACCESS: dict[str, list[str]] = {
     "hr": ["employees", "departments", "payroll"],
-    "sales": ["customers", "orders", "products", "leads"],
+    "sales": ["customers", "orders", "products", "leads", "sales"],
     "finance": ["invoices", "expenses", "budgets", "transactions"],
     "support": ["tickets", "users", "responses"],
     "admin": [],  # admin has unrestricted access — no allow-list enforcement

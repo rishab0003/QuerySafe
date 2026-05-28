@@ -17,4 +17,5 @@ update_user_role = store.update_user_role
 set_totp_secret = store.set_totp_secret
 mark_2fa_enabled = store.mark_2fa_enabled
 set_refresh_token_state = store.set_refresh_token_state
+delete_user = store.delete_user
 startup = store.startup

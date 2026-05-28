@@ -33,6 +33,7 @@ class DBConnectRequest(BaseModel):
     user: str = Field(..., description="Database username")
     password: str = Field(..., description="Database password")
     database: str = Field(..., description="Database name")
+    allow_write: bool = Field(default=False, description="Whether to allow data modification queries (UPDATE, INSERT, DELETE, etc.)")
 
     class Config:
         json_schema_extra = {
@@ -207,41 +208,58 @@ async def execute_query(request: QueryExecuteRequest):
     """
     logger.info(f"Received execute request for connection: {request.connection_id}, role: {request.role}")
     
-    # 1. Enforce strict read-only SELECT-only syntax
-    if not is_read_only_query(request.sql):
-        logger.warning(f"Rejected non-read-only query: '{request.sql}'")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Forbidden query: QuerySafe only executes read-only queries (e.g. SELECT, SHOW, EXPLAIN, DESCRIBE)."
-        )
-
-    # 2. RBAC access control check
-    role_key = request.role.strip().lower()
-    if role_key not in ROLE_ALLOWED_TABLES:
-        logger.warning(f"Rejected query due to unrecognized role: '{request.role}'")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Access denied: Unrecognized or unauthorized role '{request.role}'."
-        )
-
-    allowed_tables = ROLE_ALLOWED_TABLES[role_key]
-    queried_tables = extract_tables_from_sql(request.sql)
-
-    # Check for unauthorized table access
-    unauthorized_tables = queried_tables - allowed_tables
-    if unauthorized_tables:
-        logger.warning(f"RBAC Blocked role '{request.role}' from accessing tables: {unauthorized_tables}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                f"Access denied: Role '{request.role}' is not authorized to access "
-                f"tables: {list(unauthorized_tables)}. Allowed tables are: {list(allowed_tables)}."
-            )
-        )
-
-    # 3. Retrieve connection and execute query through the pool under strict limits
+    # 1. Retrieve connection adapter first to inspect connection configurations
     try:
         adapter = db_pool.get_connection(request.connection_id)
+    except Exception as exc:
+        logger.error(f"Error fetching connection from pool: {exc}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Database connection not found: {str(exc)}"
+        )
+
+    role_key = request.role.strip().lower()
+    
+    # Check if the connection allows write operations
+    allow_write = False
+    if hasattr(adapter, "_config") and adapter._config:
+        allow_write = adapter._config.get("allow_write", False)
+
+    # 2. Enforce strict read-only SELECT-only syntax unless it is admin and connection has write access
+    if not (role_key == "admin" and allow_write):
+        if not is_read_only_query(request.sql):
+            logger.warning(f"Rejected non-read-only query: '{request.sql}'")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Forbidden query: QuerySafe only executes read-only queries (e.g. SELECT, SHOW, EXPLAIN, DESCRIBE)."
+            )
+
+    # 3. RBAC access control check (admin has unrestricted access)
+    if role_key != "admin":
+        if role_key not in ROLE_ALLOWED_TABLES:
+            logger.warning(f"Rejected query due to unrecognized role: '{request.role}'")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied: Unrecognized or unauthorized role '{request.role}'."
+            )
+
+        allowed_tables = ROLE_ALLOWED_TABLES[role_key]
+        queried_tables = extract_tables_from_sql(request.sql)
+
+        # Check for unauthorized table access
+        unauthorized_tables = queried_tables - allowed_tables
+        if unauthorized_tables:
+            logger.warning(f"RBAC Blocked role '{request.role}' from accessing tables: {unauthorized_tables}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Access denied: Role '{request.role}' is not authorized to access "
+                    f"tables: {list(unauthorized_tables)}. Allowed tables are: {list(allowed_tables)}."
+                )
+            )
+
+    # 4. Execute query through the adapter under strict limits
+    try:
         rows, row_count, execution_time_ms = adapter.execute_readonly(
             query=request.sql,
             timeout=10,  # 10s query timeout constraint

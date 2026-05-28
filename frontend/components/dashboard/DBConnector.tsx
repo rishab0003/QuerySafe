@@ -17,6 +17,7 @@ export default function DBConnector() {
     user: 'postgres',
     password: 'secure-postgres-pass',
     database: 'querysafe',
+    allow_write: false,
   })
 
   // Load schema automatically if connectionId exists on mount
@@ -77,6 +78,7 @@ export default function DBConnector() {
       user: 'postgres',
       password: 'secure-postgres-pass',
       database: 'querysafe',
+      allow_write: false,
     })
     toast.success('Applied Postgres preset')
   }
@@ -113,6 +115,12 @@ export default function DBConnector() {
           <div>
             <span className="text-[--text-muted] block">USER</span>
             <span className="text-[--text-primary]">{form.user}</span>
+          </div>
+          <div>
+            <span className="text-[--text-muted] block">ACCESS LEVEL</span>
+            <span className={form.allow_write ? "text-[var(--accent-red)] font-semibold" : "text-[var(--accent-green)] font-semibold"}>
+              {form.allow_write ? "Read-Write" : "Read-Only"}
+            </span>
           </div>
         </div>
 
@@ -214,6 +222,19 @@ export default function DBConnector() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             placeholder="••••••••••••"
           />
+        </div>
+
+        <div className="flex items-center gap-2 py-1">
+          <input
+            id="allow_write"
+            type="checkbox"
+            checked={form.allow_write}
+            onChange={(e) => setForm({ ...form, allow_write: e.target.checked })}
+            className="rounded border-gray-300 text-[var(--accent-cyan)] focus:ring-[var(--accent-cyan)] h-4 w-4 bg-black/45 cursor-pointer"
+          />
+          <label htmlFor="allow_write" className="text-[11px] font-semibold text-[--text-muted] uppercase cursor-pointer select-none">
+            Allow Write Operations (Update & Change Data)
+          </label>
         </div>
 
         <button

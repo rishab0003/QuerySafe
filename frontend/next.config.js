@@ -6,7 +6,7 @@ const nextConfig = {
     // at the hostname 'backend'. Use that so the frontend can proxy
     // API requests to the backend container.
     return [
-      { source: '/api/:path*', destination: 'http://backend:8000/:path*' },
+      { source: '/api/:path*', destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*` },
     ];
   },
 };

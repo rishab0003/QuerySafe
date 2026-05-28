@@ -502,6 +502,18 @@ def ensure_bootstrap_admin() -> None:
         pass
 
 
+def delete_user(user_id: str) -> None:
+    if _use_postgres():
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        return
+    with _LOCK:
+        if user_id in _MEMORY_BY_ID:
+            user = _MEMORY_BY_ID.pop(user_id)
+            _MEMORY_BY_EMAIL.pop(user.email, None)
+
+
 def startup() -> None:
     init_auth_schema()
     ensure_bootstrap_admin()

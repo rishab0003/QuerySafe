@@ -10,6 +10,7 @@ Implements a StatefulGraph with four sequential nodes:
 Supports OpenAI GPT-4 and Anthropic Claude, switchable via AI_PROVIDER env var.
 """
 
+import ast
 import os
 import re
 import time
@@ -51,6 +52,52 @@ except Exception:
             if "sql query:" in lower or "explain a sql query" in lower:
                 return _MockResponse('{"explanation":"Mock: returns 1 row.", "why_these_tables":"Mock fallback.", "assumptions_made":"No real LLM available."}')
             return _MockResponse("OK")
+
+
+class _MockResponse:
+    def __init__(self, content):
+        self.content = content
+
+
+class _MockLLM:
+    def invoke(self, messages):
+        human_text = "\n".join(
+            getattr(m, "content", str(m))
+            for m in messages
+            if isinstance(m, HumanMessage)
+        )
+        system_text = "\n".join(
+            getattr(m, "content", str(m))
+            for m in messages
+            if isinstance(m, SystemMessage)
+        )
+        lower = f"{system_text}\n{human_text}".lower()
+        user_lower = human_text.lower()
+
+        if "intent classifier" in lower:
+            if any(keyword in user_lower for keyword in ("drop", "delete", "update", "insert", "truncate", "alter")):
+                return _MockResponse("unsafe")
+            if any(keyword in user_lower for keyword in ("dashboard", "chart", "graph")):
+                return _MockResponse("dashboard")
+            if "explain" in user_lower:
+                return _MockResponse("explain")
+            return _MockResponse("query")
+
+        if "explain a sql query" in lower or 'respond with only a json object with these three fields' in lower:
+            return _MockResponse(
+                '{"explanation":"Mock: this query reads rows from the database.", "why_these_tables":"Mock fallback based on the requested data.", "assumptions_made":"No real LLM provider was available."}'
+            )
+
+        if "expert sql engineer" in lower or "respond with only the sql query" in lower:
+            for table in ("sales", "customers", "orders", "products", "employees", "transactions", "invoices", "expenses", "budgets", "tickets", "users", "responses", "leads", "departments", "payroll"):
+                if re.search(rf"\b{table}\b", user_lower):
+                    return _MockResponse(_fallback_select_for_table(table))
+            return _MockResponse("SELECT 1;")
+
+        if "dashboard" in user_lower and "charts" in user_lower:
+            return _MockResponse('{"charts":[{"type":"BarChart","title":"Mock Overview","sql":"SELECT sale_id, branch, city FROM sales LIMIT 5","x_axis":"sale_id","y_axis":"sale_id","color":"#6366f1","description":"Mock dashboard fallback."}]}')
+
+        return _MockResponse("OK")
 
 try:
     from ai.embeddings import retrieve_relevant_schema
@@ -138,7 +185,7 @@ def get_llm():
 
 ROLE_TABLE_ACCESS: dict[str, list[str]] = {
     "hr": ["employees", "departments", "payroll"],
-    "sales": ["customers", "orders", "products", "leads"],
+    "sales": ["customers", "orders", "products", "leads", "sales"],
     "finance": ["invoices", "expenses", "budgets", "transactions"],
     "support": ["tickets", "users", "responses"],
     "admin": [],  # empty means unrestricted
@@ -220,14 +267,20 @@ def intent_detector_node(state: PipelineState) -> PipelineState:
         intent = "query"
 
     new_state = dict(state)
-    new_state["intent"] = intent
+    role = state.get("role", "viewer").strip().lower()
 
     if intent == "unsafe":
-        new_state["error"] = (
-            "Your request was flagged as potentially unsafe. "
-            "QuerySafe only allows read-only data queries. "
-            "Requests to modify, delete, or alter data are not permitted."
-        )
+        if role == "admin":
+            new_state["intent"] = "query"
+        else:
+            new_state["intent"] = "unsafe"
+            new_state["error"] = (
+                "Your request was flagged as potentially unsafe. "
+                "QuerySafe only allows read-only data queries. "
+                "Requests to modify, delete, or alter data are not permitted."
+            )
+    else:
+        new_state["intent"] = intent
 
     return new_state
 
@@ -313,8 +366,28 @@ Database Schema (most relevant tables):
 Conversation History (last 5 messages for context):
 {history_section}
 
-Response format — respond with ONLY the SQL query, no prose, no markdown, no explanation:
 SELECT ...
+"""
+
+_SQL_SYSTEM_PROMPT_TEMPLATE_ADMIN = """You are an expert SQL engineer for an enterprise data platform called QuerySafe.
+Your role is to convert natural language questions into SQL queries. Since you are an admin, you have access to modify the data if requested.
+
+ABSOLUTE RULES (violation is not permitted under ANY circumstances):
+1. You may generate SELECT, INSERT, UPDATE, or DELETE statements based on the user's request.
+2. Always use table-qualified column names when joining multiple tables.
+3. Add LIMIT 500 to all SELECT queries that do not already have a LIMIT clause.
+4. Never SELECT * — always list explicit column names.
+
+User Role: {role}
+{table_restriction}
+
+Database Schema (most relevant tables):
+{schema_section}
+
+Conversation History (last 5 messages for context):
+{history_section}
+
+Response format — respond with ONLY the SQL query, no prose, no markdown, no explanation:
 """
 
 
@@ -357,6 +430,124 @@ def _extract_sql(raw: str) -> str:
         cleaned = cleaned.split(";")[0].strip() + ";"
 
     return cleaned
+
+
+def _columns_from_table_entry(table_entry: dict[str, Any]) -> list[str]:
+    columns: list[str] = []
+
+    raw_columns = table_entry.get("columns")
+    if isinstance(raw_columns, list):
+        for column in raw_columns:
+            if isinstance(column, dict):
+                name = column.get("name")
+            else:
+                name = None
+            if name:
+                columns.append(str(name))
+
+    if columns:
+        return columns
+
+    metadata = table_entry.get("metadata") or {}
+    columns_json = metadata.get("columns_json") if isinstance(metadata, dict) else None
+    if isinstance(columns_json, str):
+        try:
+            parsed = ast.literal_eval(columns_json)
+        except Exception:
+            parsed = []
+        if isinstance(parsed, list):
+            for column in parsed:
+                if isinstance(column, dict) and column.get("name"):
+                    columns.append(str(column["name"]))
+
+    return columns
+
+
+def _build_table_column_map(state: PipelineState) -> dict[str, list[str]]:
+    column_map: dict[str, list[str]] = {}
+
+    schema_context = state.get("schema_context", [])
+    if isinstance(schema_context, dict):
+        schema_tables = schema_context.get("tables", [])
+    else:
+        schema_tables = schema_context
+
+    if isinstance(schema_tables, list):
+        for table in schema_tables:
+            if isinstance(table, dict):
+                table_name = table.get("name") or table.get("table_name")
+                if table_name:
+                    columns = _columns_from_table_entry(table)
+                    if columns:
+                        column_map[str(table_name).lower()] = columns
+
+    for item in state.get("relevant_schema", []):
+        if not isinstance(item, dict):
+            continue
+        table_name = item.get("table_name") or item.get("name")
+        if not table_name:
+            continue
+        columns = _columns_from_table_entry(item)
+        if not columns:
+            description = str(item.get("description", ""))
+            match = re.search(r"has columns:\s*(.*?)(?:\.|$)", description, flags=re.IGNORECASE)
+            if match:
+                candidate_columns = []
+                for fragment in match.group(1).split(","):
+                    column_name = fragment.strip().split(" ", 1)[0].strip()
+                    if column_name and column_name.lower() != "no":
+                        candidate_columns.append(column_name)
+                columns = candidate_columns
+        if columns:
+            column_map.setdefault(str(table_name).lower(), columns)
+
+    return column_map
+
+
+def _fallback_select_for_table(table_name: str) -> str:
+    fallback_columns = {
+        "sales": ["sale_id", "branch", "city", "customer_type", "gender", "product_name", "product_category", "unit_price", "quantity", "tax", "total_price", "reward_points"],
+        "customers": ["id", "name", "email"],
+        "orders": ["id", "customer_id", "total"],
+        "products": ["id", "name", "price"],
+        "employees": ["id", "name", "department"],
+        "transactions": ["id", "amount", "created_at"],
+        "invoices": ["id", "amount", "status"],
+        "expenses": ["id", "amount", "category"],
+        "budgets": ["id", "department", "amount"],
+        "tickets": ["id", "subject", "status"],
+        "users": ["id", "email", "role"],
+        "responses": ["id", "ticket_id", "message"],
+        "leads": ["id", "name", "source"],
+        "departments": ["id", "name"],
+        "payroll": ["id", "employee_id", "salary"],
+    }
+    columns = fallback_columns.get(table_name.lower(), ["id"])
+    return f"SELECT {', '.join(columns)} FROM {table_name} LIMIT 5;"
+
+
+def _expand_select_star(sql: str, table_columns: dict[str, list[str]]) -> str:
+    cleaned = sql.strip().rstrip(";")
+    if not re.match(r"^SELECT\s+\*\s+FROM\s+", cleaned, flags=re.IGNORECASE):
+        return sql.strip().rstrip(";") + ";"
+
+    match = re.match(
+        r"^SELECT\s+\*\s+FROM\s+([a-zA-Z0-9_\.\"`']+)(.*)$",
+        cleaned,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if not match:
+        return sql.strip().rstrip(";") + ";"
+
+    table_name = match.group(1).replace('"', "").replace("`", "").replace("'", "")
+    if "." in table_name:
+        table_name = table_name.split(".")[-1]
+    remainder = match.group(2) or ""
+    columns = table_columns.get(table_name.lower()) or []
+    if not columns:
+        return sql.strip().rstrip(";") + ";"
+
+    return f"SELECT {', '.join(columns)} FROM {table_name}{remainder};"
 
 
 def _calculate_confidence(
@@ -424,7 +615,8 @@ def sql_generator_node(state: PipelineState) -> PipelineState:
     schema_section = _build_schema_section(relevant_schema)
     history_section = session_history if session_history else "No prior conversation."
 
-    system_prompt = _SQL_SYSTEM_PROMPT_TEMPLATE.format(
+    template = _SQL_SYSTEM_PROMPT_TEMPLATE_ADMIN if role.lower() == "admin" else _SQL_SYSTEM_PROMPT_TEMPLATE
+    system_prompt = template.format(
         role=role,
         table_restriction=table_restriction,
         schema_section=schema_section,
@@ -440,6 +632,7 @@ def sql_generator_node(state: PipelineState) -> PipelineState:
     raw_sql = response.content if hasattr(response, "content") else str(response)
 
     sql = _extract_sql(raw_sql)
+    sql = _expand_select_star(sql, _build_table_column_map(state))
 
     # Build reasoning string
     reasoning = (

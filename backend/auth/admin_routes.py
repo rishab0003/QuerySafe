@@ -134,3 +134,31 @@ async def create_user(
         metadata={"target_email": body.email, "role": body.role, "department": body.department},
     )
     return _user_payload(user)
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_user(
+    user_id: str,
+    request: Request,
+    admin=Depends(require_admin),
+):
+    target = get_user_by_id(user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    
+    if target.id == admin.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot delete your own account.")
+        
+    try:
+        from auth.services import delete_user
+        delete_user(user_id)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc))
+        
+    log_event(
+        admin.id,
+        "ADMIN_DELETE_USER",
+        ip=_client_ip(request),
+        metadata={"target_user": user_id, "email": target.email},
+    )
+    return None

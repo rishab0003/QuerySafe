@@ -144,8 +144,8 @@ export default function Home() {
               </motion.div>
             </motion.div>
 
-            <motion.div custom={4} variants={fadeUp} className="mx-auto w-full max-w-xl">
-              <div className="glass-elevated overflow-hidden rounded-3xl">
+            <motion.div custom={4} variants={fadeUp} className="mx-auto w-full max-w-xl animate-float">
+              <div className="glass-elevated overflow-hidden rounded-3xl shadow-elevated transition-all duration-300 hover:shadow-jade-glow">
                 <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-3">
                   <div className="flex gap-1.5">
                     <div className="h-3 w-3 rounded-full bg-crimson/70" />
@@ -193,13 +193,26 @@ export default function Home() {
         <FeatureGrid />
         <Pipeline />
 
-        <section className="px-6 py-12">
+        <motion.section 
+          className="px-6 py-12"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+        >
           <div className="mx-auto flex max-w-6xl justify-center">
             <AttackDemo />
           </div>
-        </section>
+        </motion.section>
 
-        <LogosMarquee />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+        >
+          <LogosMarquee />
+        </motion.div>
       </main>
 
       <Footer />

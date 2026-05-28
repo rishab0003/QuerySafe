@@ -1,9 +1,9 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
   "/auth/oauth/callback/page": "app/auth/oauth/callback/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
   "/auth/login/page": "app/auth/login/page.js",
   "/auth/setup-2fa/page": "app/auth/setup-2fa/page.js",
-  "/auth/register/page": "app/auth/register/page.js",
   "/page": "app/page.js",
   "/dashboard/admin/page": "app/dashboard/admin/page.js",
   "/dashboard/charts/page": "app/dashboard/charts/page.js",
