@@ -7,16 +7,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # Import routers and middleware where available (work with minimal deps)
-try:
-    from auth.routes import router as auth_router
-    from auth.oauth_routes import router as oauth_router
-    from auth.admin_routes import router as admin_router
-    from auth.middleware import AuthContextMiddleware
-except Exception:
-    auth_router = None
-    oauth_router = None
-    admin_router = None
-    AuthContextMiddleware = None
+from auth.routes import router as auth_router
+from auth.oauth_routes import router as oauth_router
+from auth.admin_routes import router as admin_router
+from auth.middleware import AuthContextMiddleware
 
 try:
     from security.routes import router as security_router

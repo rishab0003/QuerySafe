@@ -24,7 +24,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-[var(--bg-surface)] border-r border-[var(--border-subtle)] p-4 h-screen flex flex-col gap-4 select-none shrink-0 shadow-card">
+    <aside className="w-full lg:w-64 bg-[var(--bg-surface)] border-b lg:border-b-0 lg:border-r border-[var(--border-subtle)] p-4 lg:h-screen flex flex-col gap-4 select-none shrink-0 shadow-card">
       {/* Brand Header */}
       <Link href="/dashboard" className="flex items-center gap-3 mb-2 hover:opacity-95 transition-opacity">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-tr from-[var(--accent-cyan)] to-[var(--jade-dim)] text-black font-extrabold shadow-glow">
@@ -71,11 +71,11 @@ export default function Sidebar() {
 
       {/* Accordion Database Schema Inspector */}
       {connectionId && schema && schema.tables && (
-        <div className="flex-1 flex flex-col min-h-0 space-y-1.5">
+        <div className="flex-1 flex flex-col min-h-0 space-y-1.5 max-h-72 lg:max-h-none">
           <div className="text-[10px] font-semibold text-[--text-muted] uppercase tracking-wider">
             Schema Explorer
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin bg-black/5 dark:bg-black/15 border border-[var(--border-subtle)] rounded-xl p-2 space-y-1">
+          <div className="flex-1 overflow-y-auto scrollbar-thin bg-black/5 dark:bg-black/15 border border-[var(--border-subtle)] rounded-xl p-2 space-y-1 max-h-64 lg:max-h-none">
             {schema.tables.map((t: any) => {
               const isOpen = expandedTable === t.name
               return (
@@ -110,7 +110,34 @@ export default function Sidebar() {
 
       {/* Static recent queries fallback */}
       {!schema && (
-        <div className="mt-2">
+        <div className="mt-2 lg:mt-0">
+          <div className="text-[10px] font-semibold text-[--text-muted] uppercase tracking-wider mb-1.5">
+            Databases
+          </div>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex-1 space-y-1 bg-black/5 dark:bg-black/15 p-2.5 rounded-xl border border-[var(--border-subtle)] text-[10px]">
+              <div className="flex items-center justify-between">
+                <div className="font-medium">Demo DB Available</div>
+                <div className="text-[10px] font-mono text-[--text-muted]">1 DB</div>
+              </div>
+              <div className="text-[9px] text-[--text-muted]">Small demo sqlite DB with sample tables (sales, employees, signups)</div>
+            </div>
+            <button
+              onClick={() => {
+                // Quick-connect demo database locally (client-side demo)
+                useChatStore.getState().setConnectionId('demo-local')
+                useChatStore.getState().setSchema({ tables: [
+                  { name: 'sales', columns: [{ name: 'city', type: 'TEXT' }, { name: 'total_price', type: 'REAL' }, { name: 'product_category', type: 'TEXT' }, { name: 'customer_type', type: 'TEXT' }] },
+                  { name: 'employees', columns: [{ name: 'id', type: 'TEXT' }, { name: 'email', type: 'TEXT' }, { name: 'full_name', type: 'TEXT' }] },
+                  { name: 'signups', columns: [{ name: 'day', type: 'TEXT' }, { name: 'count', type: 'INTEGER' }] }
+                ] })
+              }}
+              className="px-3 py-2 text-xs font-medium bg-[var(--accent-cyan)] text-white rounded-lg shadow-sm"
+            >
+              Connect Demo
+            </button>
+          </div>
+
           <div className="text-[10px] font-semibold text-[--text-muted] uppercase tracking-wider mb-1.5">
             Sample DB Queries
           </div>
@@ -159,7 +186,7 @@ export default function Sidebar() {
       </div>
 
       {/* User Info footer */}
-      <div className="mt-auto pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between">
+      <div className="mt-auto pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-xs font-semibold text-[--text-primary] truncate">{user?.full_name || 'Loading user...'}</div>
           <div className="text-[10px] text-[--text-muted] font-medium uppercase tracking-wider truncate">

@@ -258,6 +258,25 @@ async def execute_query(request: QueryExecuteRequest):
                 )
             )
 
+        # Verify referenced tables actually exist in the target database schema
+        try:
+            schema = get_database_schema(request.connection_id)
+            existing_tables = {t.get("table_name", "").lower() for t in schema.get("tables", [])}
+            missing_tables = {t for t in queried_tables if t not in existing_tables}
+            if missing_tables:
+                logger.warning(f"Query references missing tables for connection {request.connection_id}: {missing_tables}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(f"Query references tables not present in the database: {list(missing_tables)}.")
+                )
+        except HTTPException:
+            # Re-raise HTTP exceptions (e.g., schema fetch failure)
+            raise
+        except Exception as exc:
+            logger.error(f"Failed to validate referenced tables for connection {request.connection_id}: {exc}", exc_info=True)
+            # If we cannot fetch schema for some reason, continue and let execution attempt to run (will surface DB error)
+            existing_tables = set()
+
     # 4. Execute query through the adapter under strict limits
     try:
         rows, row_count, execution_time_ms = adapter.execute_readonly(

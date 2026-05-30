@@ -80,7 +80,7 @@ def init_auth_schema() -> None:
             user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             provider TEXT NOT NULL CHECK (provider IN ('google', 'github')),
             provider_user_id TEXT NOT NULL,
-            email CITEXT,
+            email TEXT,
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             UNIQUE (provider, provider_user_id)
         )

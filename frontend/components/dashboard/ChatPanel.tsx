@@ -100,7 +100,7 @@ export default function ChatPanel() {
   // Render Splash Setup Screen if disconnected
   if (!connectionId) {
     return (
-      <div className="flex-1 overflow-auto bg-[var(--bg-void)] flex items-center justify-center p-6 select-none animate-fade-in">
+      <div className="flex-1 overflow-auto bg-[var(--bg-void)] flex items-center justify-center p-4 sm:p-6 select-none animate-fade-in">
         <div className="max-w-md w-full space-y-6 text-center">
           <div className="space-y-2">
             <div className="inline-flex p-3 rounded-2xl bg-gradient-to-tr from-[var(--accent-cyan)]/10 to-[var(--jade-subtle)] border border-[var(--accent-cyan)]/20 shadow-glow mb-2 text-3xl">
@@ -120,9 +120,9 @@ export default function ChatPanel() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-screen min-h-0 bg-[var(--bg-void)]">
+    <div className="flex-1 flex flex-col min-h-0 lg:h-screen bg-[var(--bg-void)]">
       {/* Top Header info */}
-      <header className="px-6 py-4 border-b border-[var(--border-subtle)] flex items-center justify-between">
+      <header className="px-4 sm:px-6 py-4 border-b border-[var(--border-subtle)] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold text-[--text-primary]">AI Assistant Workspace</h2>
           <div className="text-[10px] text-[--text-muted]">
@@ -138,7 +138,7 @@ export default function ChatPanel() {
       </header>
 
       {/* Message Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 scrollbar-thin">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center space-y-3 opacity-60">
             <div className="text-3xl">🤖</div>
@@ -152,7 +152,7 @@ export default function ChatPanel() {
             const isUser = m.role === 'user'
             return (
               <div key={m.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`}>
-                <div className={`max-w-[85%] rounded-2xl p-4 ${isUser ? 'bg-gradient-to-tr from-[var(--jade)] to-[var(--jade-dim)] text-black shadow-card font-medium' : 'glass-elevated border border-[var(--border-subtle)] shadow-elevated'} space-y-3`}>
+                <div className={`w-full sm:max-w-[85%] rounded-2xl p-4 ${isUser ? 'bg-gradient-to-tr from-[var(--jade)] to-[var(--jade-dim)] text-black shadow-card font-medium' : 'glass-elevated border border-[var(--border-subtle)] shadow-elevated'} space-y-3`}>
                   {/* Text Description */}
                   <p className="text-xs leading-relaxed whitespace-pre-wrap">{m.text}</p>
 
@@ -252,19 +252,19 @@ export default function ChatPanel() {
             e.preventDefault()
             send()
           }}
-          className="flex gap-3 items-center max-w-4xl mx-auto"
+          className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center max-w-4xl mx-auto"
         >
           <input
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={loading}
-            className="qs-input flex-1 py-3 px-4 rounded-xl text-sm"
+            className="qs-input flex-1 py-3 px-4 rounded-xl text-sm min-w-0"
             placeholder="Type your data question (e.g. 'Show me products by category')..."
           />
           <button
             type="submit"
             disabled={loading || !prompt.trim()}
-            className="qs-btn-primary py-3 px-5 font-semibold text-sm cursor-pointer shadow-glow"
+            className="qs-btn-primary py-3 px-5 font-semibold text-sm cursor-pointer shadow-glow w-full sm:w-auto"
           >
             {loading ? 'Executing' : 'Run Query'}
           </button>

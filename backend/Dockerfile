@@ -14,7 +14,16 @@ COPY req_no_psycopg.txt ./req_no_psycopg.txt
 # Install into a prefix so runtime image can copy only installed packages
 # Use minimal deps when requested to speed local builds and avoid heavy AI deps
 RUN pip install --upgrade pip \
-        && pip install --prefix=/install --no-cache-dir -r requirements.txt
+    && if [ "$USE_MINIMAL_DEPS" = "true" ]; then \
+        pip install --prefix=/install --no-cache-dir -r req_no_psycopg.txt; \
+       else \
+        pip install --prefix=/install --no-cache-dir \
+          --extra-index-url https://download.pytorch.org/whl/cpu \
+          torch==2.3.1+cpu \
+        && pip install --prefix=/install --no-cache-dir -r requirements.txt; \
+       fi
+        # Ensure latest google genai SDK is available in runtime images
+        RUN pip install --prefix=/install --no-cache-dir google-genai
 
 
 FROM python:3.11-slim AS runtime
@@ -38,9 +47,9 @@ COPY --chown=appuser:appuser . /app
 # Attempt to pre-cache model (best-effort). Use a separate script to avoid
 # complex inline quoting in Dockerfile which can appear as an editor lint
 # error. The script is non-fatal on failure.
-RUN python /app/backend/scripts/precache_model.py || true
+RUN python /app/scripts/precache_model.py || true
 # Initialize demo database so demo endpoints are available in the image
-RUN python /app/backend/scripts/init_demo_db.py || true
+RUN python /app/scripts/init_demo_db.py || true
 
 RUN chown -R appuser:appuser /app
 USER appuser

@@ -8,8 +8,8 @@ type Props = {
 
 export default function ResultTable({columns, rows}: Props){
   return (
-    <div className="overflow-auto bg-[--bg-surface] rounded p-3">
-      <table className="w-full text-sm table-auto">
+    <div className="overflow-auto bg-[--bg-surface] rounded p-3 max-w-full">
+      <table className="w-full min-w-max text-sm table-auto">
         <thead>
           <tr>
             {columns.map(col=> (

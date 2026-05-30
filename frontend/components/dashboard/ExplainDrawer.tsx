@@ -44,8 +44,8 @@ export default function ExplainDrawer({ data, onClose }:{data:any|null,onClose?:
   }
 
   return (
-    <aside className="fixed right-0 top-0 h-full w-96 bg-[#0b0b12] p-4 shadow-lg">
-      <div className="flex items-center justify-between mb-3">
+    <aside className="fixed inset-x-0 top-0 z-50 h-full w-full lg:left-auto lg:right-0 lg:inset-x-auto lg:w-96 bg-[#0b0b12] p-4 shadow-lg overflow-y-auto">
+      <div className="flex items-center justify-between mb-3 gap-3">
         <div className="text-lg font-medium">Explanation</div>
         <div className="flex items-center gap-2">
           <button onClick={copy} className="qs-btn-ghost">Copy</button>

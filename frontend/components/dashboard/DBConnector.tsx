@@ -149,6 +149,24 @@ export default function DBConnector() {
       </div>
 
       <form onSubmit={handleConnect} className="space-y-3">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              // Quick connect demo locally without calling backend
+              setConnectionId('demo-local')
+              setSchema({ tables: [
+                { name: 'sales', columns: [{ name: 'city', type: 'TEXT' }, { name: 'total_price', type: 'REAL' }, { name: 'product_category', type: 'TEXT' }, { name: 'customer_type', type: 'TEXT' }] },
+                { name: 'employees', columns: [{ name: 'id', type: 'TEXT' }, { name: 'email', type: 'TEXT' }, { name: 'full_name', type: 'TEXT' }] },
+                { name: 'signups', columns: [{ name: 'day', type: 'TEXT' }, { name: 'count', type: 'INTEGER' }] }
+              ] })
+              toast.success('Connected to Demo DB (local)')
+            }}
+            className="text-[10px] px-3 py-1 rounded bg-[var(--accent-cyan)] text-white mr-2"
+          >
+            Quick Connect Demo
+          </button>
+        </div>
         <div>
           <label className="block text-[11px] font-semibold text-[--text-muted] uppercase mb-1">Database Type</label>
           <select

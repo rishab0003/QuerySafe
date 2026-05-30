@@ -89,7 +89,7 @@ export default function Inspector() {
   }
 
   return (
-    <aside className="w-96 bg-[var(--bg-surface)] border-l border-[var(--border-subtle)] p-5 h-screen overflow-y-auto scrollbar-thin flex flex-col gap-4 shrink-0 shadow-card">
+    <aside className="w-full lg:w-96 bg-[var(--bg-surface)] border-t lg:border-t-0 lg:border-l border-[var(--border-subtle)] p-4 sm:p-5 lg:h-screen overflow-y-auto scrollbar-thin flex flex-col gap-4 shrink-0 shadow-card">
       <div className="flex items-center justify-between pb-2 border-b border-[var(--border-subtle)]">
         <h2 className="text-sm font-semibold tracking-wider uppercase text-[--text-muted]">SQL Console</h2>
         <span className="text-[10px] font-semibold bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] px-2 py-0.5 rounded-full font-mono">
@@ -110,7 +110,7 @@ export default function Inspector() {
       </div>
 
       {/* Console Actions */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
           onClick={explainSql}
           disabled={explainLoading || !sql.trim()}
@@ -160,7 +160,7 @@ export default function Inspector() {
               No rows returned.
             </div>
           ) : (
-            <div className="flex-1 overflow-auto border border-[var(--border-subtle)] rounded-xl bg-black/5 dark:bg-black/15 p-2 scrollbar-thin max-h-80">
+            <div className="flex-1 overflow-auto border border-[var(--border-subtle)] rounded-xl bg-black/5 dark:bg-black/15 p-2 scrollbar-thin max-h-80 min-h-0">
               {runColumns && (
                 <ResultTable
                   columns={runColumns}

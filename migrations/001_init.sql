@@ -17,20 +17,12 @@ CREATE TABLE IF NOT EXISTS users (
   last_login TIMESTAMP WITH TIME ZONE
 );
 
-CREATE TABLE IF NOT EXISTS database_connections (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id uuid REFERENCES users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  db_type TEXT NOT NULL,
-  encrypted_credentials TEXT,
-  connection_status TEXT,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
+
 
 CREATE TABLE IF NOT EXISTS audit_logs (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id uuid REFERENCES users(id),
-  connection_id uuid REFERENCES database_connections(id),
+  connection_id uuid,
   natural_query TEXT,
   generated_sql TEXT,
   execution_time_ms INTEGER,
